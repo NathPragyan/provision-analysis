@@ -1,5 +1,6 @@
 import streamlit as st
+import pandas as pd
+import matplotlib.pyplot as plt
 
-st.title('Provision Analysis')
-
-st.write('Choose two options')
+# Set page title
+st.title('Interactive Dashboard: Load Trend and Cost Trend Analysis')
