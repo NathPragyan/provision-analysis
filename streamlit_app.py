@@ -30,12 +30,7 @@ route_type_filter = st.sidebar.selectbox('route_type', ['All', 'Regional', 'Nati
 vehicle_type_filter = st.sidebar.selectbox('vendor_type', ['All', 'Vendor Scheduled', 'Ad-Hoc'])
 
 
-# Apply filters to the data
-filtered_data = data.copy()  # Remove unnecessary indentation
-if route_type_filter != 'All':
-    filtered_data = filtered_data[filtered_data['route_type'] == route_type_filter]
-if vehicle_type_filter != 'All':
-    filtered_data = filtered_data[filtered_data['vendor_type'] == vehicle_type_filter]
+
 
 
 
