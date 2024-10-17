@@ -36,6 +36,7 @@ if uploaded_files:
     st.sidebar.header('Filters')
     route_type_filter = st.sidebar.selectbox('route_type', ['All', 'REGIONAL', 'NATIONAL'])
     vendor_type_filter = st.sidebar.selectbox('vendor_type', ['All', 'VENDOR_SCHEDULED', 'MARKET', 'FEEDER'])
+    cluster_filter = st.sidebar.selectbox('Cluster', ['All'] + sorted(data['Cluster'].dropna().unique().tolist()))
 
     # Apply filters to the data
     filtered_data = data.copy()
@@ -44,6 +45,9 @@ if uploaded_files:
 
     if vendor_type_filter != 'All':
         filtered_data = filtered_data[filtered_data['vendor_type'] == vendor_type_filter]
+
+    if cluster_filter != 'All':
+        filtered_data = filtered_data[filtered_data['Cluster'] == cluster_filter]
 
     # Function to annotate bars with formatted values
     def annotate_bars(ax, fmt="{:,.1f}"):
@@ -116,6 +120,7 @@ if uploaded_files:
 
 else:
     st.warning('Please upload at least one file to proceed.')
+
 
 
 
