@@ -44,13 +44,23 @@ if uploaded_files:
     if vendor_type_filter != 'All':
         filtered_data = filtered_data[filtered_data['vendor_type'] == vendor_type_filter]
 
+    # Function to annotate bars with values
+    def annotate_bars(ax):
+        for p in ax.patches:
+            ax.annotate(f'{p.get_height():.2f}', 
+                        (p.get_x() + p.get_width() / 2., p.get_height()), 
+                        ha='center', va='center', 
+                        xytext=(0, 9), 
+                        textcoords='offset points')
+
     # Function to plot load trend
     def plot_load_trend(data):
         st.subheader('Load Trend Analysis (in Tonnes)')
         
         # Weekly comparison of capacity moved
         plt.figure(figsize=(10, 6))
-        sns.barplot(data=data, x='Week No', y='Capacity Moved', hue='Month', ci="sd")
+        ax = sns.barplot(data=data, x='Week No', y='Capacity Moved', hue='Month', ci="sd")
+        annotate_bars(ax)
         plt.title('Capacity Moved - Weekly Comparison ')
         plt.xlabel('Week Number')
         plt.ylabel('Capacity Moved (Tonnes)')
@@ -60,7 +70,8 @@ if uploaded_files:
         # Monthly comparison of capacity moved
         plt.figure(figsize=(8, 6))
         monthly_capacity = data.groupby('Month')['Capacity Moved'].sum().reset_index()
-        sns.barplot(data=monthly_capacity, x='Month', y='Capacity Moved', color='green', ci="sd")
+        ax = sns.barplot(data=monthly_capacity, x='Month', y='Capacity Moved', color='green', ci="sd")
+        annotate_bars(ax)
         plt.title('Capacity Moved - Monthly Comparison')
         plt.xlabel('Month')
         plt.ylabel('Total Capacity Moved (Tonnes)')
@@ -72,7 +83,8 @@ if uploaded_files:
 
         # Weekly comparison of section cost
         plt.figure(figsize=(10, 6))
-        sns.barplot(data=data, x='Week No', y='Section Cost', hue='Month', ci="sd")
+        ax = sns.barplot(data=data, x='Week No', y='Section Cost', hue='Month', ci="sd")
+        annotate_bars(ax)
         plt.title('Section Cost - Weekly Comparison')
         plt.xlabel('Week Number')
         plt.ylabel('Section Cost (Crores)')
@@ -82,7 +94,8 @@ if uploaded_files:
         # Monthly comparison of section cost
         plt.figure(figsize=(8, 6))
         monthly_cost = data.groupby('Month')['Section Cost'].sum().reset_index()
-        sns.barplot(data=monthly_cost, x='Month', y='Section Cost', color='red', ci="sd")
+        ax = sns.barplot(data=monthly_cost, x='Month', y='Section Cost', color='red', ci="sd")
+        annotate_bars(ax)
         plt.title('Section Cost - Monthly Comparison')
         plt.xlabel('Month')
         plt.ylabel('Total Section Cost (Crores)')
@@ -96,3 +109,4 @@ if uploaded_files:
 
 else:
     st.warning('Please upload at least one file to proceed.')
+
