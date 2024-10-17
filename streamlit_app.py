@@ -8,7 +8,7 @@ st.title('Provision Analysis: Load Trend and Cost Trend ')
 
 # Sidebar to upload multiple files
 st.sidebar.header('Upload your  Data Files')
-uploaded_files = st.sidebar.file_uploader("Choose Provision files", accept_multiple_files=True, type=['xlsx'])
+uploaded_files = st.sidebar.file_uploader('Choose Provision files', accept_multiple_files=True, type=['xlsx'])
 
 # Load all files into a single dataframe
 dataframes = [pd.read_xlsx(file) for file in uploaded_files]
