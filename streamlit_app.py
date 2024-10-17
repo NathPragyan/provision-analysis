@@ -44,10 +44,10 @@ if uploaded_files:
     if vendor_type_filter != 'All':
         filtered_data = filtered_data[filtered_data['vendor_type'] == vendor_type_filter]
 
-    # Function to annotate bars with values
+    # Function to annotate bars with rounded values
     def annotate_bars(ax):
         for p in ax.patches:
-            ax.annotate(f'{p.get_height():.2f}', 
+            ax.annotate(f'{round(p.get_height()):,}',  # Round off and format the number with commas
                         (p.get_x() + p.get_width() / 2., p.get_height()), 
                         ha='center', va='center', 
                         xytext=(0, 9), 
@@ -115,5 +115,6 @@ if uploaded_files:
 
 else:
     st.warning('Please upload at least one file to proceed.')
+
 
 
