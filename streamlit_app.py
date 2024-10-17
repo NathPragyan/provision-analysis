@@ -10,11 +10,10 @@ st.title('Provision Analysis: Load Trend and Cost Trend ')
 st.sidebar.header('Upload your  Data Files')
 uploaded_files = st.sidebar.file_uploader('Choose Provision files', accept_multiple_files=True, type=['xlsx'])
 
-# Check if files are uploaded
-if not uploaded_files:st.warning('Please upload at least one file to proceed.')else:
+
 # Load all files into a single dataframe
 dataframes = [pd.read_excel(file) for file in uploaded_files]
-data = pd.concat(dataframes, ignore_index=True)
+data=pd.concat(dataframes, ignore_index=True)
 
 
 # Sidebar options to choose between Load Trend and Cost Trend
