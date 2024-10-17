@@ -11,8 +11,7 @@ st.sidebar.header('Upload your  Data Files')
 uploaded_files = st.sidebar.file_uploader('Choose Provision files', accept_multiple_files=True, type=['xlsx'])
 
 # Check if files are uploaded
-if not uploaded_files:
-st.warning('Please upload at least one file to proceed.')
+if not uploaded_files:st.warning('Please upload at least one file to proceed.')
 else:
 # Load all files into a single dataframe
 dataframes = [pd.read_excel(file) for file in uploaded_files]
