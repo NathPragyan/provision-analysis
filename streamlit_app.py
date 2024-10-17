@@ -17,8 +17,12 @@ if uploaded_files:
     dataframes = [pd.read_excel(file) for file in uploaded_files]
     data = pd.concat(dataframes, ignore_index=True)
 
+    # Debugging output
+    st.write("Data Loaded Successfully:")
+    st.write(data.head())  # Display the first few rows of the dataframe
+
     # Ensure the date column is in datetime format
-    data['Start_location_scheduled_dispatch_time'] = pd.to_datetime(data['Start_location_scheduled_dispatch_time'])
+    data['Start_location_scheduled_dispatch_time'] = pd.to_datetime(data['Start_location_scheduled_dispatch_time'], errors='coerce')
 
     # Extract month from the date column
     data['Month'] = data['Start_location_scheduled_dispatch_time'].dt.month_name()
@@ -45,7 +49,7 @@ if uploaded_files:
         
         # Weekly comparison of capacity moved
         plt.figure(figsize=(10, 6))
-        sns.barplot(data=data, x='Week No', y='Capacity Moved', hue='Month', ci='sd')
+        sns.barplot(data=data, x='Week No', y='Capacity Moved', hue='Month', ci='sd')  # Include confidence intervals
         plt.title('Capacity Moved - Weekly Comparison')
         plt.xlabel('Week Number')
         plt.ylabel('Capacity Moved')
@@ -55,7 +59,7 @@ if uploaded_files:
         # Monthly comparison of capacity moved
         plt.figure(figsize=(8, 6))
         monthly_capacity = data.groupby('Month')['Capacity Moved'].sum().reset_index()
-        sns.barplot(data=monthly_capacity, x='Month', y='Capacity Moved', color='green', ci='sd')
+        sns.barplot(data=monthly_capacity, x='Month', y='Capacity Moved', color='green', ci='sd')  # Include confidence intervals
         plt.title('Capacity Moved - Monthly Comparison')
         plt.xlabel('Month')
         plt.ylabel('Total Capacity Moved')
@@ -67,7 +71,7 @@ if uploaded_files:
 
         # Weekly comparison of section cost
         plt.figure(figsize=(10, 6))
-        sns.barplot(data=data, x='Week No', y='Section Cost', hue='Month', ci='sd')
+        sns.barplot(data=data, x='Week No', y='Section Cost', hue='Month', ci='sd')  # Include confidence intervals
         plt.title('Section Cost - Weekly Comparison')
         plt.xlabel('Week Number')
         plt.ylabel('Section Cost')
@@ -77,7 +81,7 @@ if uploaded_files:
         # Monthly comparison of section cost
         plt.figure(figsize=(8, 6))
         monthly_cost = data.groupby('Month')['Section Cost'].sum().reset_index()
-        sns.barplot(data=monthly_cost, x='Month', y='Section Cost', color='red', ci='sd')
+        sns.barplot(data=monthly_cost, x='Month', y='Section Cost', color='red', ci='sd')  # Include confidence intervals
         plt.title('Section Cost - Monthly Comparison')
         plt.xlabel('Month')
         plt.ylabel('Total Section Cost')
@@ -91,16 +95,3 @@ if uploaded_files:
 
 else:
     st.warning('Please upload at least one file to proceed.')
-
-
-
-
-
-
-
-
-
-
-
-  
-
