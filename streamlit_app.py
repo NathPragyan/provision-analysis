@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 st.title('Interactive Dashboard: Load Trend and Cost Trend Analysis')
 
 # Sidebar to upload multiple files
-st.sidebar.header('Upload your 4 Data Files')
+st.sidebar.header('Upload your  Data Files')
 uploaded_files = st.sidebar.file_uploader("Choose CSV files", accept_multiple_files=True, type=['xlsx'])
 
  # Sidebar options to choose between Load Trend and Cost Trend
