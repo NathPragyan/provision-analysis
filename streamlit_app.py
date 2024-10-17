@@ -19,22 +19,6 @@ data=pd.concat(dataframes, ignore_index=True)
 # Sidebar options to choose between Load Trend and Cost Trend
 trend_option = st.sidebar.selectbox('Choose Trend Type', ['Load Trend', 'Cost Trend'])
 
-# Sidebar filters
-st.sidebar.header('Filters')
-route_type_filter = st.sidebar.selectbox('route_type', ['All', 'Regional', 'National'])
-vehicle_type_filter = st.sidebar.selectbox('vendor_type', ['All', 'Vendor Scheduled', 'Ad-Hoc'])
-cluster_filter = st.sidebar.selectbox('Cluster', ['All'] + list(data['cluster'].unique()))
 
-
-# Apply filters to the data
-filtered_data = data.copy()
-
-if route_type_filter != 'All':
-    filtered_data = filtered_data[filtered_data['route_type'] == route_type_filter]
-
-if vehicle_type_filter != 'All':
-    filtered_data = filtered_data[filtered_data['vendor_type'] == vehicle_type_filter]
-
-if cluster_filter != 'All':
-    filtered_data = filtered_data[filtered_data['cluster'] == cluster_filter]
+  
 
