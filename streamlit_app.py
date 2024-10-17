@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Set page title
-st.title('Interactive Dashboard: Load Trend and Cost Trend Analysis')
+st.title('Provision Analysis: Load Trend and Cost Trend ')
 
 # Sidebar to upload multiple files
 st.sidebar.header('Upload your  Data Files')
