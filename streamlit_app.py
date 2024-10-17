@@ -28,9 +28,13 @@ cluster_filter = st.sidebar.selectbox('Cluster', ['All'] + list(data['cluster'].
 
 # Apply filters to the data
 filtered_data = data.copy()
+
 if route_type_filter != 'All':
-filtered_data = filtered_data[filtered_data['route_type'] == route_type_filter]
+    filtered_data = filtered_data[filtered_data['route_type'] == route_type_filter]
+
 if vehicle_type_filter != 'All':
-filtered_data = filtered_data[filtered_data['vendor_type'] == vehicle_type_filter]
+    filtered_data = filtered_data[filtered_data['vendor_type'] == vehicle_type_filter]
+
 if cluster_filter != 'All':
-filtered_data = filtered_data[filtered_data['cluster'] == cluster_filter]
+    filtered_data = filtered_data[filtered_data['cluster'] == cluster_filter]
+
