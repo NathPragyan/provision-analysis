@@ -56,12 +56,15 @@ if uploaded_files:
     # Function to plot load trend
     def plot_load_trend(data):
         st.subheader('Load Trend Analysis (in Tonnes)')
-        
+
+        # Group data by 'Week No' and 'Month' for weekly comparison of capacity moved
+        weekly_capacity = data.groupby(['Week No', 'Month'])['Capacity Moved'].sum().reset_index()
+
         # Weekly comparison of capacity moved
         plt.figure(figsize=(10, 6))
-        ax = sns.barplot(data=data, x='Week No', y='Capacity Moved', hue='Month', ci="sd")
+        ax = sns.barplot(data=weekly_capacity, x='Week No', y='Capacity Moved', hue='Month', ci="sd")
         annotate_bars(ax)
-        plt.title('Capacity Moved - Weekly Comparison ')
+        plt.title('Capacity Moved - Weekly Comparison')
         plt.xlabel('Week Number')
         plt.ylabel('Capacity Moved (Tonnes)')
         plt.legend(title='Month')
@@ -81,9 +84,12 @@ if uploaded_files:
     def plot_cost_trend(data):
         st.subheader('Cost Trend Analysis (in Crores)')
 
+        # Group data by 'Week No' and 'Month' for weekly comparison of section cost
+        weekly_cost = data.groupby(['Week No', 'Month'])['Section Cost'].sum().reset_index()
+
         # Weekly comparison of section cost
         plt.figure(figsize=(10, 6))
-        ax = sns.barplot(data=data, x='Week No', y='Section Cost', hue='Month', ci="sd")
+        ax = sns.barplot(data=weekly_cost, x='Week No', y='Section Cost', hue='Month', ci="sd")
         annotate_bars(ax)
         plt.title('Section Cost - Weekly Comparison')
         plt.xlabel('Week Number')
@@ -109,4 +115,5 @@ if uploaded_files:
 
 else:
     st.warning('Please upload at least one file to proceed.')
+
 
