@@ -22,6 +22,12 @@ if uploaded_files:
     # Extract month from the date column
     data['Month'] = data['Start_location_scheduled_dispatch_time'].dt.month_name()
 
+    # Convert Section Cost to crores (assuming Section Cost is in INR)
+    data['Section Cost'] = data['Section Cost'] / 10**7  # 1 crore = 10 million (10^7)
+
+    # Convert Capacity Moved to tonnes (assuming Capacity Moved is in kg)
+    data['Capacity Moved'] = data['Capacity Moved'] / 1000  # 1 tonne = 1000 kg
+
     # Sidebar options to choose between Load Trend and Cost Trend
     trend_option = st.sidebar.selectbox('Choose Trend Type', ['Load Trend', 'Cost Trend'])
     
@@ -40,14 +46,14 @@ if uploaded_files:
 
     # Function to plot load trend
     def plot_load_trend(data):
-        st.subheader('Load Trend Analysis')
+        st.subheader('Load Trend Analysis (in Tonnes)')
         
         # Weekly comparison of capacity moved
         plt.figure(figsize=(10, 6))
         sns.barplot(data=data, x='Week No', y='Capacity Moved', hue='Month', ci="sd")
         plt.title('Capacity Moved - Weekly Comparison ')
         plt.xlabel('Week Number')
-        plt.ylabel('Capacity Moved')
+        plt.ylabel('Capacity Moved (Tonnes)')
         plt.legend(title='Month')
         st.pyplot(plt)
 
@@ -57,19 +63,19 @@ if uploaded_files:
         sns.barplot(data=monthly_capacity, x='Month', y='Capacity Moved', color='green', ci="sd")
         plt.title('Capacity Moved - Monthly Comparison')
         plt.xlabel('Month')
-        plt.ylabel('Total Capacity Moved')
+        plt.ylabel('Total Capacity Moved (Tonnes)')
         st.pyplot(plt)
 
     # Function to plot cost trend
     def plot_cost_trend(data):
-        st.subheader('Cost Trend Analysis')
+        st.subheader('Cost Trend Analysis (in Crores)')
 
         # Weekly comparison of section cost
         plt.figure(figsize=(10, 6))
         sns.barplot(data=data, x='Week No', y='Section Cost', hue='Month', ci="sd")
         plt.title('Section Cost - Weekly Comparison')
         plt.xlabel('Week Number')
-        plt.ylabel('Section Cost')
+        plt.ylabel('Section Cost (Crores)')
         plt.legend(title='Month')
         st.pyplot(plt)
 
@@ -79,7 +85,7 @@ if uploaded_files:
         sns.barplot(data=monthly_cost, x='Month', y='Section Cost', color='red', ci="sd")
         plt.title('Section Cost - Monthly Comparison')
         plt.xlabel('Month')
-        plt.ylabel('Total Section Cost')
+        plt.ylabel('Total Section Cost (Crores)')
         st.pyplot(plt)
 
     # Display the relevant trend based on user selection
