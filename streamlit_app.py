@@ -34,11 +34,11 @@ if uploaded_files:
 
     # Sidebar filters
     st.sidebar.header('Filters')
-    route_type_filter = st.sidebar.selectbox('route_type', ['All', 'REGIONAL', 'NATIONAL'])
-    vendor_type_filter = st.sidebar.selectbox('vendor_type', ['All', 'VENDOR_SCHEDULED', 'MARKET', 'FEEDER'])
+    route_type_filter = st.sidebar.selectbox('Route Type', ['All', 'REGIONAL', 'NATIONAL'])
+    vendor_type_filter = st.sidebar.selectbox('Vendor Type', ['All', 'VENDOR_SCHEDULED', 'MARKET', 'FEEDER'])
     cluster_filter = st.sidebar.selectbox('Cluster', ['All'] + sorted(data['Cluster'].dropna().unique().tolist()))
 
-    # Lane filter with a searchable dropdown based on the cluster selection
+    # Lane filter options based on the selected cluster
     if cluster_filter != 'All':
         lane_options = ['All'] + sorted(data[data['Lane'].str.startswith(cluster_filter)]['Lane'].unique().tolist())
     else:
@@ -74,14 +74,12 @@ if uploaded_files:
     def annotate_bars(ax):
         for p in ax.patches:
             value = p.get_height()
-            # Format the number with two decimal points
             formatted_value = "{:,.2f}".format(value)
             ax.annotate(formatted_value,
                         (p.get_x() + p.get_width() / 2., value),
-                        ha='center', va='center',
-                        xytext=(0, 9),
-                        textcoords='offset points',
-                        fontsize=8)  # Set a smaller font size
+                        ha='center', va='bottom',  # Change vertical alignment to bottom
+                        xytext=(0, 3),  # Adjusted to be just above the bar
+                        textcoords='offset points')
 
     # Function to plot load trend
     def plot_load_trend(data):
@@ -147,6 +145,7 @@ if uploaded_files:
 
 else:
     st.warning('Please upload at least one file to proceed.')
+
 
 
 
