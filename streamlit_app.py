@@ -76,10 +76,11 @@ if uploaded_files:
             value = p.get_height()
             # Format the number with two decimal points
             formatted_value = "{:,.2f}".format(value)
+            y_position = value + (value * 0.05)  # Add 5% of the bar height as spacing
             ax.annotate(formatted_value,
-                        (p.get_x() + p.get_width() / 2., value),
-                        ha='center', va='center',
-                        xytext=(0, 9),
+                        (p.get_x() + p.get_width() / 2., y_position),
+                        ha='center', va='bottom',  # Align at the bottom of the annotation
+                        xytext=(0, 5),  # 5 points above the bar
                         textcoords='offset points')
 
     # Function to plot load trend
@@ -89,8 +90,9 @@ if uploaded_files:
         # Group data by 'Week No' and 'Month' for weekly comparison of capacity moved
         weekly_capacity = data.groupby(['Week No', 'Month'])['Capacity Moved'].sum().reset_index()
 
-        # Weekly comparison of capacity moved
-        plt.figure(figsize=(10, 6))
+        # Set figure size dynamically based on number of weeks
+        num_weeks = weekly_capacity['Week No'].nunique()
+        plt.figure(figsize=(10, max(6, 2 + num_weeks * 0.3)))  # Adjust height based on number of bars
         ax = sns.barplot(data=weekly_capacity, x='Week No', y='Capacity Moved', hue='Month', ci=None)
         annotate_bars(ax)
         plt.title('Capacity Moved - Weekly Comparison')
@@ -116,8 +118,9 @@ if uploaded_files:
         # Group data by 'Week No' and 'Month' for weekly comparison of section cost
         weekly_cost = data.groupby(['Week No', 'Month'])['Section Cost (Lakhs)'].sum().reset_index()
 
-        # Weekly comparison of section cost in lakhs
-        plt.figure(figsize=(10, 6))
+        # Set figure size dynamically based on number of weeks
+        num_weeks_cost = weekly_cost['Week No'].nunique()
+        plt.figure(figsize=(10, max(6, 2 + num_weeks_cost * 0.3)))  # Adjust height based on number of bars
         ax = sns.barplot(data=weekly_cost, x='Week No', y='Section Cost (Lakhs)', hue='Month', ci=None)
         annotate_bars(ax)
         plt.title('Section Cost - Weekly Comparison (in Lakhs)')
@@ -146,6 +149,7 @@ if uploaded_files:
 
 else:
     st.warning('Please upload at least one file to proceed.')
+
 
 
 
