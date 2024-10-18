@@ -54,6 +54,9 @@ if uploaded_files:
     if route_type_filter != 'All':
         filtered_data = filtered_data[filtered_data['route_type'] == route_type_filter]
 
+        # Update lane options based on route type selection
+        lane_options = ['All'] + sorted(filtered_data['Lane'].unique().tolist())
+    
     # Vendor type filter logic
     if vendor_type_filter != 'All':
         filtered_data = filtered_data[filtered_data['vendor_type'] == vendor_type_filter]
@@ -79,7 +82,8 @@ if uploaded_files:
                         (p.get_x() + p.get_width() / 2., value),
                         ha='center', va='bottom',  # Change vertical alignment to bottom
                         xytext=(0, 3),  # Adjusted to be just above the bar
-                        textcoords='offset points')
+                        textcoords='offset points',
+                        fontsize=7)  # Set font size to 7
 
     # Function to plot load trend
     def plot_load_trend(data):
@@ -145,6 +149,7 @@ if uploaded_files:
 
 else:
     st.warning('Please upload at least one file to proceed.')
+
 
 
 
