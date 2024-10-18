@@ -38,15 +38,12 @@ if uploaded_files:
     vendor_type_filter = st.sidebar.selectbox('vendor_type', ['All', 'VENDOR_SCHEDULED', 'MARKET', 'FEEDER'])
     cluster_filter = st.sidebar.selectbox('Cluster', ['All'] + sorted(data['Cluster'].dropna().unique().tolist()))
 
-    # Filter lanes based on the selected cluster and route type
-    if route_type_filter != 'All':
-        lane_options = ['All'] + sorted(data[data['route_type'] == route_type_filter]['Lane'].dropna().unique().tolist())
+    # Lane filter with a searchable dropdown based on the cluster selection
+    if cluster_filter != 'All':
+        lane_options = ['All'] + sorted(data[data['Lane'].str.startswith(cluster_filter)]['Lane'].unique().tolist())
     else:
         lane_options = ['All'] + sorted(data['Lane'].dropna().unique().tolist())
-
-    if cluster_filter != 'All':
-        lane_options = ['All'] + sorted(data[(data['Cluster'] == cluster_filter) & (data['route_type'] == route_type_filter)]['Lane'].dropna().unique().tolist())
-
+    
     # Lane filter with search functionality
     lane_filter = st.sidebar.selectbox('Lane', lane_options)
 
@@ -64,22 +61,21 @@ if uploaded_files:
     # Cluster filter logic
     if cluster_filter != 'All':
         filtered_data = filtered_data[filtered_data['Cluster'] == cluster_filter]
+        lane_options = ['All'] + sorted(filtered_data[filtered_data['Lane'].str.startswith(cluster_filter)]['Lane'].unique().tolist())
 
     # Lane filter logic
     if lane_filter != 'All':
         filtered_data = filtered_data[filtered_data['Lane'] == lane_filter]
-
-    # Automatically set cluster filter based on lane selection
-    if lane_filter != 'All' and cluster_filter == 'All':
-        inferred_cluster = lane_filter.split('-')[0]
-        cluster_filter = inferred_cluster
+        # Automatically set cluster filter based on lane selection
+        if any(filtered_data['Lane'].str.startswith(lane_filter.split('-')[0])):
+            cluster_filter = lane_filter.split('-')[0]
 
     # Function to annotate bars with formatted values
     def annotate_bars(ax):
         for p in ax.patches:
             value = p.get_height()
-            # Format the number with three decimal points if less than 1, otherwise one decimal point
-            formatted_value = "{:,.3f}".format(value) if value < 1 else "{:,.1f}".format(value)
+            # Format the number with two decimal points
+            formatted_value = "{:,.2f}".format(value)
             ax.annotate(formatted_value,
                         (p.get_x() + p.get_width() / 2., value),
                         ha='center', va='center',
@@ -150,6 +146,7 @@ if uploaded_files:
 
 else:
     st.warning('Please upload at least one file to proceed.')
+
 
 
 
