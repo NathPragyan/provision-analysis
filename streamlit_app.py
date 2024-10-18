@@ -49,14 +49,17 @@ if uploaded_files:
     if cluster_filter != 'All':
         filtered_data = filtered_data[filtered_data['Cluster'] == cluster_filter]
 
-    # Function to annotate bars with formatted values
+    # Function to annotate bars with formatted values and dynamically adjust text size
     def annotate_bars(ax, fmt="{:,.1f}"):
         for p in ax.patches:
-            ax.annotate(fmt.format(p.get_height()),  # Format the number according to the specified format
-                        (p.get_x() + p.get_width() / 2., p.get_height()), 
-                        ha='center', va='center', 
-                        xytext=(0, 9), 
-                        textcoords='offset points')
+            value = p.get_height()
+            fontsize = 10 if value < 1000 else 8 if value < 10000 else 6  # Adjust font size based on the number size
+            ax.annotate(fmt.format(value),
+                        (p.get_x() + p.get_width() / 2., value),
+                        ha='center', va='center',
+                        xytext=(0, 9),
+                        textcoords='offset points',
+                        fontsize=fontsize)  # Apply dynamic font size
 
     # Function to get the sorted order of months available in the data
     def get_sorted_months(data):
@@ -143,6 +146,7 @@ if uploaded_files:
 
 else:
     st.warning('Please upload at least one file to proceed.')
+
 
 
 
