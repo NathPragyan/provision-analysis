@@ -31,19 +31,20 @@ if uploaded_files:
 
     # Sidebar options to choose between Load Trend and Cost Trend
     trend_option = st.sidebar.selectbox('Choose Trend Type', ['Load Trend', 'Cost Trend'])
-
+    
     # Sidebar filters
     st.sidebar.header('Filters')
-    route_type_filter = st.sidebar.selectbox('Route Type', ['All', 'REGIONAL', 'NATIONAL'])
-    vendor_type_filter = st.sidebar.selectbox('Vendor Type', ['All', 'VENDOR_SCHEDULED', 'MARKET', 'FEEDER'])
+    route_type_filter = st.sidebar.selectbox('route_type', ['All', 'REGIONAL', 'NATIONAL'])
+    vendor_type_filter = st.sidebar.selectbox('vendor_type', ['All', 'VENDOR_SCHEDULED', 'MARKET', 'FEEDER'])
+    cluster_filter = st.sidebar.selectbox('Cluster', ['All'] + sorted(data['Cluster'].dropna().unique().tolist()))
 
-    # Get available clusters based on data
-    available_clusters = ['All'] + sorted(data['Cluster'].dropna().unique().tolist())
-    cluster_filter = st.sidebar.selectbox('Cluster', available_clusters)
-
-    # Lane filter that allows typing for search
-    lane_options = sorted(data['Lane'].dropna().unique().tolist())
-    lane_filter = st.sidebar.selectbox('Lane (search by typing)', ['All'] + lane_options)
+    # Lane filter with search functionality
+    if cluster_filter == 'All':
+        lane_filter = st.sidebar.selectbox('Lane', ['All'] + sorted(data['Lane'].dropna().unique().tolist()))
+    else:
+        # Filter lanes starting with the selected cluster
+        lanes = data[data['Cluster'] == cluster_filter]['Lane'].dropna().unique()
+        lane_filter = st.sidebar.selectbox('Lane', ['All'] + sorted(lanes.tolist()))
 
     # Apply filters to the data
     filtered_data = data.copy()
@@ -59,20 +60,14 @@ if uploaded_files:
     if lane_filter != 'All':
         filtered_data = filtered_data[filtered_data['Lane'] == lane_filter]
 
-    # Automatically update cluster filter based on selected lane
-    if lane_filter != 'All':
-        selected_cluster = lane_filter.split('-')[0]
-        cluster_filter = selected_cluster
-
     # Function to annotate bars with formatted values
     def annotate_bars(ax, fmt="{:,.1f}"):
         for p in ax.patches:
-            ax.annotate(fmt.format(p.get_height()),
-                        (p.get_x() + p.get_width() / 2., p.get_height()),
-                        ha='center', va='bottom',
-                        xytext=(0, 5),  # Adjusted for better spacing
-                        textcoords='offset points',
-                        fontsize=8)  # Adjusted for smaller font size
+            ax.annotate(fmt.format(p.get_height()), 
+                        (p.get_x() + p.get_width() / 2., p.get_height()), 
+                        ha='center', va='center', 
+                        xytext=(0, 9), 
+                        textcoords='offset points', fontsize=8)  # Smaller font size for clarity
 
     # Function to plot load trend
     def plot_load_trend(data):
@@ -88,25 +83,17 @@ if uploaded_files:
         plt.title('Capacity Moved - Weekly Comparison')
         plt.xlabel('Week Number')
         plt.ylabel('Capacity Moved (Tonnes)')
-        plt.xticks(rotation=45)
         plt.legend(title='Month')
         st.pyplot(plt)
 
         # Monthly comparison of capacity moved
-        plt.figure(figsize=(10, 6))
+        plt.figure(figsize=(8, 6))
         monthly_capacity = data.groupby('Month')['Capacity Moved'].sum().reset_index()
-        # Sort months
-        monthly_capacity['Month'] = pd.Categorical(monthly_capacity['Month'], categories=[
-            'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'
-        ], ordered=True)
-        monthly_capacity = monthly_capacity.sort_values('Month')
-
         ax = sns.barplot(data=monthly_capacity, x='Month', y='Capacity Moved', color='green', ci="sd")
         annotate_bars(ax, fmt="{:,.1f}")
         plt.title('Capacity Moved - Monthly Comparison')
         plt.xlabel('Month')
         plt.ylabel('Total Capacity Moved (Tonnes)')
-        plt.xticks(rotation=45)
         st.pyplot(plt)
 
     # Function to plot cost trend
@@ -123,25 +110,24 @@ if uploaded_files:
         plt.title('Section Cost - Weekly Comparison (in Lakhs)')
         plt.xlabel('Week Number')
         plt.ylabel('Section Cost (Lakhs)')
-        plt.xticks(rotation=45)
         plt.legend(title='Month')
         st.pyplot(plt)
 
-        # Monthly comparison of section cost
-        plt.figure(figsize=(10, 6))
-        monthly_cost = data.groupby('Month')['Section Cost (Lakhs)'].sum().reset_index()
-        # Sort months
-        monthly_cost['Month'] = pd.Categorical(monthly_cost['Month'], categories=[
-            'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'
-        ], ordered=True)
-        monthly_cost = monthly_cost.sort_values('Month')
+        # Monthly comparison of section cost in crores or lakhs based on filter selection
+        plt.figure(figsize=(8, 6))
+        if cluster_filter == 'All' and lane_filter == 'All':
+            monthly_cost = data.groupby('Month')['Section Cost (Crores)'].sum().reset_index()
+            ax = sns.barplot(data=monthly_cost, x='Month', y='Section Cost (Crores)', color='red', ci="sd")
+            plt.ylabel('Total Section Cost (Crores)')
+            plt.title('Section Cost - Monthly Comparison (in Crores)')
+        else:
+            monthly_cost = data.groupby('Month')['Section Cost (Lakhs)'].sum().reset_index()
+            ax = sns.barplot(data=monthly_cost, x='Month', y='Section Cost (Lakhs)', color='red', ci="sd")
+            plt.ylabel('Total Section Cost (Lakhs)')
+            plt.title('Section Cost - Monthly Comparison (in Lakhs)')
 
-        ax = sns.barplot(data=monthly_cost, x='Month', y='Section Cost (Lakhs)', color='red', ci="sd")
         annotate_bars(ax, fmt="{:,.1f}")
-        plt.title('Section Cost - Monthly Comparison (in Lakhs)')
         plt.xlabel('Month')
-        plt.ylabel('Total Section Cost (Lakhs)')
-        plt.xticks(rotation=45)
         st.pyplot(plt)
 
     # Display the relevant trend based on user selection
