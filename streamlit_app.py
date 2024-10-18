@@ -38,8 +38,13 @@ if uploaded_files:
     vendor_type_filter = st.sidebar.selectbox('vendor_type', ['All', 'VENDOR_SCHEDULED', 'MARKET', 'FEEDER'])
     cluster_filter = st.sidebar.selectbox('Cluster', ['All'] + sorted(data['Cluster'].dropna().unique().tolist()))
 
-    # Lane filter with a searchable dropdown
-    lane_options = ['All'] + sorted(data['Lane'].dropna().unique().tolist())
+    # Lane filter with a searchable dropdown based on the cluster selection
+    if cluster_filter != 'All':
+        lane_options = ['All'] + sorted(data[data['Lane'].str.startswith(cluster_filter)]['Lane'].unique().tolist())
+    else:
+        lane_options = ['All'] + sorted(data['Lane'].dropna().unique().tolist())
+    
+    # Lane filter with search functionality
     lane_filter = st.sidebar.selectbox('Lane', lane_options)
 
     # Apply filters to the data
@@ -57,7 +62,6 @@ if uploaded_files:
     if cluster_filter != 'All':
         filtered_data = filtered_data[filtered_data['Cluster'] == cluster_filter]
         lane_options = ['All'] + sorted(filtered_data[filtered_data['Lane'].str.startswith(cluster_filter)]['Lane'].unique().tolist())
-        lane_filter = st.sidebar.selectbox('Lane', lane_options)
 
     # Lane filter logic
     if lane_filter != 'All':
@@ -142,6 +146,7 @@ if uploaded_files:
 
 else:
     st.warning('Please upload at least one file to proceed.')
+
 
 
 
