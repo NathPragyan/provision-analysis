@@ -36,11 +36,14 @@ if uploaded_files:
     st.sidebar.header('Filters')
     route_type_filter = st.sidebar.selectbox('Route Type', ['All', 'REGIONAL', 'NATIONAL'])
     vendor_type_filter = st.sidebar.selectbox('Vendor Type', ['All', 'VENDOR_SCHEDULED', 'MARKET', 'FEEDER'])
-    cluster_filter = st.sidebar.selectbox('Cluster', ['All'] + sorted(data['Cluster'].dropna().unique().tolist()))
+
+    # Get available clusters based on data
+    available_clusters = ['All'] + sorted(data['Cluster'].dropna().unique().tolist())
+    cluster_filter = st.sidebar.selectbox('Cluster', available_clusters)
 
     # Lane filter that allows typing for search
     lane_options = sorted(data['Lane'].dropna().unique().tolist())
-    lane_filter = st.sidebar.selectbox('Lane (search by typing)', ['All'] + sorted(lane_options))
+    lane_filter = st.sidebar.selectbox('Lane (search by typing)', ['All'] + lane_options)
 
     # Apply filters to the data
     filtered_data = data.copy()
@@ -60,16 +63,16 @@ if uploaded_files:
     if lane_filter != 'All':
         selected_cluster = lane_filter.split('-')[0]
         cluster_filter = selected_cluster
-    st.sidebar.selectbox('Cluster', ['All'] + sorted(data['Cluster'].dropna().unique().tolist()), index=['All'].index(cluster_filter))
 
     # Function to annotate bars with formatted values
     def annotate_bars(ax, fmt="{:,.1f}"):
         for p in ax.patches:
             ax.annotate(fmt.format(p.get_height()),
                         (p.get_x() + p.get_width() / 2., p.get_height()),
-                        ha='center', va='center',
-                        xytext=(0, 9),
-                        textcoords='offset points')
+                        ha='center', va='bottom',
+                        xytext=(0, 5),  # Adjusted for better spacing
+                        textcoords='offset points',
+                        fontsize=8)  # Adjusted for smaller font size
 
     # Function to plot load trend
     def plot_load_trend(data):
@@ -97,7 +100,7 @@ if uploaded_files:
             'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'
         ], ordered=True)
         monthly_capacity = monthly_capacity.sort_values('Month')
-        
+
         ax = sns.barplot(data=monthly_capacity, x='Month', y='Capacity Moved', color='green', ci="sd")
         annotate_bars(ax, fmt="{:,.1f}")
         plt.title('Capacity Moved - Monthly Comparison')
@@ -149,6 +152,7 @@ if uploaded_files:
 
 else:
     st.warning('Please upload at least one file to proceed.')
+
 
 
 
