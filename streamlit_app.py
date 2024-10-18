@@ -31,16 +31,16 @@ if uploaded_files:
 
     # Sidebar options to choose between Load Trend and Cost Trend
     trend_option = st.sidebar.selectbox('Choose Trend Type', ['Load Trend', 'Cost Trend'])
-    
+
     # Sidebar filters
     st.sidebar.header('Filters')
-    route_type_filter = st.sidebar.selectbox('route_type', ['All', 'REGIONAL', 'NATIONAL'])
-    vendor_type_filter = st.sidebar.selectbox('vendor_type', ['All', 'VENDOR_SCHEDULED', 'MARKET', 'FEEDER'])
+    route_type_filter = st.sidebar.selectbox('Route Type', ['All', 'REGIONAL', 'NATIONAL'])
+    vendor_type_filter = st.sidebar.selectbox('Vendor Type', ['All', 'VENDOR_SCHEDULED', 'MARKET', 'FEEDER'])
     cluster_filter = st.sidebar.selectbox('Cluster', ['All'] + sorted(data['Cluster'].dropna().unique().tolist()))
-    
-    # Lane filter with search capability
-    lane_options = ['All'] + sorted(data['Lane'].dropna().unique().tolist())
-    lane_filter = st.sidebar.selectbox('Search for Lane', options=lane_options, index=0, key='lane_filter')
+
+    # Lane filter that allows typing for search
+    lane_options = sorted(data['Lane'].dropna().unique().tolist())
+    lane_filter = st.sidebar.selectbox('Lane (search by typing)', ['All'] + sorted(lane_options))
 
     # Apply filters to the data
     filtered_data = data.copy()
@@ -56,15 +56,20 @@ if uploaded_files:
     if lane_filter != 'All':
         filtered_data = filtered_data[filtered_data['Lane'] == lane_filter]
 
-    # Function to annotate bars with formatted values, adjusting text size for large numbers
+    # Automatically update cluster filter based on selected lane
+    if lane_filter != 'All':
+        selected_cluster = lane_filter.split('-')[0]
+        cluster_filter = selected_cluster
+    st.sidebar.selectbox('Cluster', ['All'] + sorted(data['Cluster'].dropna().unique().tolist()), index=['All'].index(cluster_filter))
+
+    # Function to annotate bars with formatted values
     def annotate_bars(ax, fmt="{:,.1f}"):
         for p in ax.patches:
             ax.annotate(fmt.format(p.get_height()),
                         (p.get_x() + p.get_width() / 2., p.get_height()),
-                        ha='center', va='center', 
+                        ha='center', va='center',
                         xytext=(0, 9),
-                        textcoords='offset points',
-                        fontsize=8 if p.get_height() > 1000 else 10)  # Adjust font size for readability
+                        textcoords='offset points')
 
     # Function to plot load trend
     def plot_load_trend(data):
@@ -73,29 +78,32 @@ if uploaded_files:
         # Group data by 'Week No' and 'Month' for weekly comparison of capacity moved
         weekly_capacity = data.groupby(['Week No', 'Month'])['Capacity Moved'].sum().reset_index()
 
-        # Sort months in chronological order
-        months_order = data['Month'].dropna().unique().tolist()
-        weekly_capacity['Month'] = pd.Categorical(weekly_capacity['Month'], categories=months_order, ordered=True)
-
         # Weekly comparison of capacity moved
         plt.figure(figsize=(10, 6))
-        ax = sns.barplot(data=weekly_capacity, x='Week No', y='Capacity Moved', hue='Month', ci=None)
+        ax = sns.barplot(data=weekly_capacity, x='Week No', y='Capacity Moved', hue='Month', ci="sd")
         annotate_bars(ax, fmt="{:,.1f}")
         plt.title('Capacity Moved - Weekly Comparison')
         plt.xlabel('Week Number')
         plt.ylabel('Capacity Moved (Tonnes)')
-        plt.legend(title='Month', loc='upper left')
+        plt.xticks(rotation=45)
+        plt.legend(title='Month')
         st.pyplot(plt)
 
         # Monthly comparison of capacity moved
-        plt.figure(figsize=(8, 6))
+        plt.figure(figsize=(10, 6))
         monthly_capacity = data.groupby('Month')['Capacity Moved'].sum().reset_index()
-        monthly_capacity['Month'] = pd.Categorical(monthly_capacity['Month'], categories=months_order, ordered=True)
-        ax = sns.barplot(data=monthly_capacity, x='Month', y='Capacity Moved', color='green', ci=None)
+        # Sort months
+        monthly_capacity['Month'] = pd.Categorical(monthly_capacity['Month'], categories=[
+            'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'
+        ], ordered=True)
+        monthly_capacity = monthly_capacity.sort_values('Month')
+        
+        ax = sns.barplot(data=monthly_capacity, x='Month', y='Capacity Moved', color='green', ci="sd")
         annotate_bars(ax, fmt="{:,.1f}")
         plt.title('Capacity Moved - Monthly Comparison')
         plt.xlabel('Month')
         plt.ylabel('Total Capacity Moved (Tonnes)')
+        plt.xticks(rotation=45)
         st.pyplot(plt)
 
     # Function to plot cost trend
@@ -105,29 +113,32 @@ if uploaded_files:
         # Group data by 'Week No' and 'Month' for weekly comparison of section cost
         weekly_cost = data.groupby(['Week No', 'Month'])['Section Cost (Lakhs)'].sum().reset_index()
 
-        # Sort months in chronological order
-        months_order = data['Month'].dropna().unique().tolist()
-        weekly_cost['Month'] = pd.Categorical(weekly_cost['Month'], categories=months_order, ordered=True)
-
         # Weekly comparison of section cost in lakhs
         plt.figure(figsize=(10, 6))
-        ax = sns.barplot(data=weekly_cost, x='Week No', y='Section Cost (Lakhs)', hue='Month', ci=None)
+        ax = sns.barplot(data=weekly_cost, x='Week No', y='Section Cost (Lakhs)', hue='Month', ci="sd")
         annotate_bars(ax, fmt="{:,.1f}")
         plt.title('Section Cost - Weekly Comparison (in Lakhs)')
         plt.xlabel('Week Number')
         plt.ylabel('Section Cost (Lakhs)')
-        plt.legend(title='Month', loc='upper left')
+        plt.xticks(rotation=45)
+        plt.legend(title='Month')
         st.pyplot(plt)
 
-        # Monthly comparison of section cost with cluster filter adjustment
-        plt.figure(figsize=(8, 6))
-        monthly_cost = data.groupby('Month')['Section Cost (Lakhs)' if cluster_filter != 'All' else 'Section Cost (Crores)'].sum().reset_index()
-        monthly_cost['Month'] = pd.Categorical(monthly_cost['Month'], categories=months_order, ordered=True)
-        ax = sns.barplot(data=monthly_cost, x='Month', y=monthly_cost.columns[1], color='red', ci=None)
+        # Monthly comparison of section cost
+        plt.figure(figsize=(10, 6))
+        monthly_cost = data.groupby('Month')['Section Cost (Lakhs)'].sum().reset_index()
+        # Sort months
+        monthly_cost['Month'] = pd.Categorical(monthly_cost['Month'], categories=[
+            'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'
+        ], ordered=True)
+        monthly_cost = monthly_cost.sort_values('Month')
+
+        ax = sns.barplot(data=monthly_cost, x='Month', y='Section Cost (Lakhs)', color='red', ci="sd")
         annotate_bars(ax, fmt="{:,.1f}")
-        plt.title(f'Section Cost - Monthly Comparison (in {"Lakhs" if cluster_filter != "All" else "Crores"})')
+        plt.title('Section Cost - Monthly Comparison (in Lakhs)')
         plt.xlabel('Month')
-        plt.ylabel(f'Total Section Cost (in {"Lakhs" if cluster_filter != "All" else "Crores"})')
+        plt.ylabel('Total Section Cost (Lakhs)')
+        plt.xticks(rotation=45)
         st.pyplot(plt)
 
     # Display the relevant trend based on user selection
@@ -138,6 +149,7 @@ if uploaded_files:
 
 else:
     st.warning('Please upload at least one file to proceed.')
+
 
 
 
