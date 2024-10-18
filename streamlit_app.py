@@ -65,10 +65,15 @@ if uploaded_files:
         # Group data by 'Week No' and 'Month' for weekly comparison of capacity moved
         weekly_capacity = data.groupby(['Week No', 'Month'])['Capacity Moved'].sum().reset_index()
 
+        # Ensure the months are ordered chronologically
+        monthly_order = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+        weekly_capacity['Month'] = pd.Categorical(weekly_capacity['Month'], categories=monthly_order, ordered=True)
+        weekly_capacity = weekly_capacity.sort_values('Month')
+
         # Weekly comparison of capacity moved
         plt.figure(figsize=(10, 6))
         ax = sns.barplot(data=weekly_capacity, x='Week No', y='Capacity Moved', hue='Month', ci="sd")
-        annotate_bars(ax, fmt="{:,.0f}")
+        annotate_bars(ax, fmt="{:,.1f}")
         plt.title('Capacity Moved - Weekly Comparison')
         plt.xlabel('Week Number')
         plt.ylabel('Capacity Moved (Tonnes)')
@@ -78,8 +83,11 @@ if uploaded_files:
         # Monthly comparison of capacity moved
         plt.figure(figsize=(8, 6))
         monthly_capacity = data.groupby('Month')['Capacity Moved'].sum().reset_index()
+        monthly_capacity['Month'] = pd.Categorical(monthly_capacity['Month'], categories=monthly_order, ordered=True)
+        monthly_capacity = monthly_capacity.sort_values('Month')
+
         ax = sns.barplot(data=monthly_capacity, x='Month', y='Capacity Moved', color='green', ci="sd")
-        annotate_bars(ax, fmt="{:,.0f}")
+        annotate_bars(ax, fmt="{:,.1f}")
         plt.title('Capacity Moved - Monthly Comparison')
         plt.xlabel('Month')
         plt.ylabel('Total Capacity Moved (Tonnes)')
@@ -91,6 +99,8 @@ if uploaded_files:
 
         # Group data by 'Week No' and 'Month' for weekly comparison of section cost
         weekly_cost = data.groupby(['Week No', 'Month'])['Section Cost (Lakhs)'].sum().reset_index()
+        weekly_cost['Month'] = pd.Categorical(weekly_cost['Month'], categories=monthly_order, ordered=True)
+        weekly_cost = weekly_cost.sort_values('Month')
 
         # Weekly comparison of section cost in lakhs
         plt.figure(figsize=(10, 6))
@@ -102,14 +112,23 @@ if uploaded_files:
         plt.legend(title='Month')
         st.pyplot(plt)
 
-        # Monthly comparison of section cost in crores
+        # Monthly comparison of section cost based on cluster selection
         plt.figure(figsize=(8, 6))
-        monthly_cost = data.groupby('Month')['Section Cost (Crores)'].sum().reset_index()
-        ax = sns.barplot(data=monthly_cost, x='Month', y='Section Cost (Crores)', color='red', ci="sd")
+        if cluster_filter == 'All':
+            monthly_cost = data.groupby('Month')['Section Cost (Crores)'].sum().reset_index()
+            y_label = 'Total Section Cost (Crores)'
+        else:
+            monthly_cost = data.groupby('Month')['Section Cost (Lakhs)'].sum().reset_index()
+            y_label = 'Total Section Cost (Lakhs)'
+
+        monthly_cost['Month'] = pd.Categorical(monthly_cost['Month'], categories=monthly_order, ordered=True)
+        monthly_cost = monthly_cost.sort_values('Month')
+
+        ax = sns.barplot(data=monthly_cost, x='Month', y=monthly_cost.columns[1], color='red', ci="sd")
         annotate_bars(ax, fmt="{:,.1f}")
-        plt.title('Section Cost - Monthly Comparison (in Crores)')
+        plt.title('Section Cost - Monthly Comparison')
         plt.xlabel('Month')
-        plt.ylabel('Total Section Cost (Crores)')
+        plt.ylabel(y_label)
         st.pyplot(plt)
 
     # Display the relevant trend based on user selection
@@ -120,8 +139,3 @@ if uploaded_files:
 
 else:
     st.warning('Please upload at least one file to proceed.')
-
-
-
-
-
