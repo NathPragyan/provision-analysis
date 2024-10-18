@@ -70,18 +70,19 @@ if uploaded_files:
         if any(filtered_data['Lane'].str.startswith(lane_filter.split('-')[0])):
             cluster_filter = lane_filter.split('-')[0]
 
-    # Function to annotate bars with formatted values
+    # Function to annotate bars with smaller font size
     def annotate_bars(ax):
         for p in ax.patches:
             value = p.get_height()
             # Format the number with two decimal points
             formatted_value = "{:,.2f}".format(value)
-            y_position = value + (value * 0.05)  # Add 5% of the bar height as spacing
+            y_position = value + (value * 0.05)  # Add some space above the bar
             ax.annotate(formatted_value,
                         (p.get_x() + p.get_width() / 2., y_position),
                         ha='center', va='bottom',  # Align at the bottom of the annotation
                         xytext=(0, 5),  # 5 points above the bar
-                        textcoords='offset points')
+                        textcoords='offset points',
+                        fontsize=8)  # Set smaller font size for annotations
 
     # Function to plot load trend
     def plot_load_trend(data):
@@ -149,6 +150,7 @@ if uploaded_files:
 
 else:
     st.warning('Please upload at least one file to proceed.')
+
 
 
 
