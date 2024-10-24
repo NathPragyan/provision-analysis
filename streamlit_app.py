@@ -137,9 +137,9 @@ if uploaded_files:
         plt.figure(figsize=(10, 6))
         ax = sns.barplot(data=weekly_cost, x='Week No', y='Section Cost (Lakhs)', hue='Month', ci=None)
         annotate_bars(ax)
-        plt.title('Section Cost - Weekly Comparison (in Lakhs)')
+        plt.title('Cost - Weekly Comparison (in Lakhs)')
         plt.xlabel('Week Number')
-        plt.ylabel('Section Cost (Lakhs)')
+        plt.ylabel('Cost (Lakhs)')
         plt.legend(title='Month')
         st.pyplot(plt)
 
