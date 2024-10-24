@@ -150,9 +150,9 @@ if uploaded_files:
         plt.figure(figsize=(8, 6))
         ax = sns.barplot(data=monthly_cost, x='Month', y=cost_column, color='red', ci=None)
         annotate_bars(ax)
-        plt.title(f'Section Cost - Monthly Comparison ({cost_column.split()[2]})')
+        plt.title(f' Cost - Monthly Comparison ({cost_column.split()[2]})')
         plt.xlabel('Month')
-        plt.ylabel(f'Total Section Cost ({cost_column.split()[2]})')
+        plt.ylabel(f'Total Cost ({cost_column.split()[2]})')
         st.pyplot(plt)
 
     # Display the relevant trend based on user selection
