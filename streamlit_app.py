@@ -37,9 +37,10 @@ if uploaded_files:
     route_type_filter = st.sidebar.selectbox('Route Type', ['All', 'REGIONAL', 'NATIONAL'])
     vendor_type_filter = st.sidebar.selectbox('Vendor Type', ['All', 'VENDOR_SCHEDULED', 'MARKET', 'FEEDER'])
 
-    # Cluster filter with added option for DEL_NOI
+    # Cluster filter with only DEL_NOI option
     cluster_options = ['All'] + sorted(data['Cluster'].dropna().unique().tolist())
     if 'DEL' in cluster_options and 'NOI' in cluster_options:
+        cluster_options = [opt for opt in cluster_options if opt not in ['DEL', 'NOI']]  # Remove DEL and NOI
         cluster_options.append('DEL_NOI')
     cluster_filter = st.sidebar.selectbox('Cluster', cluster_options)
 
@@ -159,22 +160,3 @@ if uploaded_files:
 
 else:
     st.warning('Please upload at least one file to proceed.')
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
