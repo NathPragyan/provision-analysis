@@ -36,14 +36,19 @@ if uploaded_files:
     st.sidebar.header('Filters')
     route_type_filter = st.sidebar.selectbox('Route Type', ['All', 'REGIONAL', 'NATIONAL'])
     vendor_type_filter = st.sidebar.selectbox('Vendor Type', ['All', 'VENDOR_SCHEDULED', 'MARKET', 'FEEDER'])
-    cluster_filter = st.sidebar.selectbox('Cluster', ['All'] + sorted(data['Cluster'].dropna().unique().tolist()))
+
+    # Cluster filter with added option for DEL_NOI
+    cluster_options = ['All'] + sorted(data['Cluster'].dropna().unique().tolist())
+    if 'DEL' in cluster_options and 'NOI' in cluster_options:
+        cluster_options.append('DEL_NOI')
+    cluster_filter = st.sidebar.selectbox('Cluster', cluster_options)
 
     # Lane filter options based on the selected cluster
-    if cluster_filter != 'All':
+    if cluster_filter != 'All' and cluster_filter != 'DEL_NOI':
         lane_options = ['All'] + sorted(data[data['Lane'].str.startswith(cluster_filter)]['Lane'].unique().tolist())
     else:
         lane_options = ['All'] + sorted(data['Lane'].dropna().unique().tolist())
-    
+
     # Lane filter with search functionality
     lane_filter = st.sidebar.selectbox('Lane', lane_options)
 
@@ -56,14 +61,19 @@ if uploaded_files:
 
         # Update lane options based on route type selection
         lane_options = ['All'] + sorted(filtered_data['Lane'].unique().tolist())
-    
+
     # Vendor type filter logic
     if vendor_type_filter != 'All':
         filtered_data = filtered_data[filtered_data['vendor_type'] == vendor_type_filter]
 
-    # Cluster filter logic
+    # Cluster filter logic with DEL_NOI handling
     if cluster_filter != 'All':
-        filtered_data = filtered_data[filtered_data['Cluster'] == cluster_filter]
+        if cluster_filter == 'DEL_NOI':
+            # Filter rows where Cluster is either DEL or NOI
+            filtered_data = filtered_data[filtered_data['Cluster'].isin(['DEL', 'NOI'])]
+        else:
+            filtered_data = filtered_data[filtered_data['Cluster'] == cluster_filter]
+
         lane_options = ['All'] + sorted(filtered_data[filtered_data['Lane'].str.startswith(cluster_filter)]['Lane'].unique().tolist())
 
     # Lane filter logic
@@ -149,6 +159,7 @@ if uploaded_files:
 
 else:
     st.warning('Please upload at least one file to proceed.')
+
 
 
 
