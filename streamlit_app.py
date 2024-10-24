@@ -45,8 +45,11 @@ if uploaded_files:
     cluster_filter = st.sidebar.selectbox('Cluster', cluster_options)
 
     # Lane filter options based on the selected cluster
-    if cluster_filter != 'All' and cluster_filter != 'DEL_NOI':
-        lane_options = ['All'] + sorted(data[data['Lane'].str.startswith(cluster_filter)]['Lane'].unique().tolist())
+    if cluster_filter != 'All':
+        if cluster_filter == 'DEL_NOI':
+            lane_options = ['All'] + sorted(data[data['Cluster'].isin(['DEL', 'NOI'])]['Lane'].unique().tolist())
+        else:
+            lane_options = ['All'] + sorted(data[data['Cluster'] == cluster_filter]['Lane'].unique().tolist())
     else:
         lane_options = ['All'] + sorted(data['Lane'].dropna().unique().tolist())
 
@@ -75,7 +78,7 @@ if uploaded_files:
         else:
             filtered_data = filtered_data[filtered_data['Cluster'] == cluster_filter]
 
-        lane_options = ['All'] + sorted(filtered_data[filtered_data['Lane'].str.startswith(cluster_filter)]['Lane'].unique().tolist())
+        lane_options = ['All'] + sorted(filtered_data['Lane'].unique().tolist())
 
     # Lane filter logic
     if lane_filter != 'All':
