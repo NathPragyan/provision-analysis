@@ -29,10 +29,10 @@ if uploaded_files:
     # Convert Capacity Moved to tonnes (assuming Capacity Moved is in kg)
     data['Capacity Moved'] = data['Capacity Moved'] / 1000  # 1 tonne = 1000 kg
 
-    # Sidebar options to choose between Load Trend and Cost Trend
-    trend_option = st.sidebar.selectbox('Choose Trend Type', ['Load Trend', 'Cost Trend'])
+    # Sidebar options to choose between Load Trend, Cost Trend, and Zonal Analysis
+    trend_option = st.sidebar.selectbox('Choose Trend Type', ['Load Trend', 'Cost Trend', 'Zonal Analysis'])
 
-    # Sidebar filters
+    # Sidebar filters for general Load and Cost Trends
     st.sidebar.header('Filters')
     route_type_filter = st.sidebar.selectbox('Route Type', ['All', 'REGIONAL', 'NATIONAL'])
     vendor_type_filter = st.sidebar.selectbox('Vendor Type', ['All', 'VENDOR_SCHEDULED', 'MARKET', 'FEEDER'])
@@ -94,10 +94,10 @@ if uploaded_files:
             formatted_value = "{:,.2f}".format(value)
             ax.annotate(formatted_value,
                         (p.get_x() + p.get_width() / 2., value),
-                        ha='center', va='bottom',  # Change vertical alignment to bottom
-                        xytext=(0, 3),  # Adjusted to be just above the bar
+                        ha='center', va='bottom',
+                        xytext=(0, 3),
                         textcoords='offset points',
-                        fontsize=7)  # Set font size to 7
+                        fontsize=7)
 
     # Function to plot load trend
     def plot_load_trend(data):
@@ -150,17 +150,44 @@ if uploaded_files:
         plt.figure(figsize=(8, 6))
         ax = sns.barplot(data=monthly_cost, x='Month', y=cost_column, color='red', ci=None)
         annotate_bars(ax)
-        plt.title(f' Cost - Monthly Comparison ({cost_column.split()[2]})')
+        plt.title(f'Cost - Monthly Comparison ({cost_column.split()[2]})')
         plt.xlabel('Month')
         plt.ylabel(f'Total Cost ({cost_column.split()[2]})')
+        st.pyplot(plt)
+
+    # Function to plot zonal analysis
+    def plot_zonal_analysis(data):
+        st.subheader('Zonal Analysis')
+
+        # Group data by Zone and calculate total capacity moved and cost
+        zonal_capacity = data.groupby('Zone')['Capacity Moved'].sum().reset_index()
+        zonal_cost = data.groupby('Zone')['Section Cost (Lakhs)'].sum().reset_index()
+
+        # Plotting capacity moved by zone
+        plt.figure(figsize=(10, 6))
+        ax = sns.barplot(data=zonal_capacity, x='Zone', y='Capacity Moved', color='blue', ci=None)
+        annotate_bars(ax)
+        plt.title('Total Capacity Moved by Zone')
+        plt.xlabel('Zone')
+        plt.ylabel('Total Capacity Moved (Tonnes)')
+        st.pyplot(plt)
+
+        # Plotting cost by zone
+        plt.figure(figsize=(10, 6))
+        ax = sns.barplot(data=zonal_cost, x='Zone', y='Section Cost (Lakhs)', color='orange', ci=None)
+        annotate_bars(ax)
+        plt.title('Total Cost by Zone')
+        plt.xlabel('Zone')
+        plt.ylabel('Total Cost (Lakhs)')
         st.pyplot(plt)
 
     # Display the relevant trend based on user selection
     if trend_option == 'Load Trend':
         plot_load_trend(filtered_data)
-    else:
+    elif trend_option == 'Cost Trend':
         plot_cost_trend(filtered_data)
+    else:  # Zonal Analysis
+        plot_zonal_analysis(filtered_data)
 
 else:
     st.warning('Please upload at least one file to proceed.')
-
