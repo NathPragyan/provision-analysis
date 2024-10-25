@@ -145,32 +145,38 @@ if uploaded_files:
         st.pyplot(plt)
 
     # Function to filter data based on zones
-    def filter_zonal_data(data, zone):
-        if zone == 'N1':
-            return data[data['Lane'].isin(data[data['Cluster'].isin(['DEL', 'JAI', 'LKO'])]['Lane'])]
-        elif zone == 'N2':
-            return data[(data['Cluster'] == 'AMB') & (~data['Lane'].str.contains('IXJ'))]
-        elif zone == 'N3':
-            return data[data['Lane'].str.contains('IXJ')]
-        elif zone == 'S1':
-            return data[(data['Cluster'].isin(['BLR', 'CJB', 'HYD', 'MAA'])) & (~data['Lane'].str.contains('CCJ'))]
-        elif zone == 'S2':
-            return data[data['Lane'].str.contains('CCJ')]
-        elif zone == 'E':
-            return data[(data['Cluster'].isin(['IXW', 'CCU'])) & (~data['Lane'].str.contains('NAG')) | (data['Lane'].str.contains('RPR'))]
-        elif zone == 'W1':
-            return data[(data['Cluster'].isin(['BOM', 'NAG', 'PNQ'])) & (~data['Lane'].str.contains('RPR|GOI'))]
-        elif zone == 'W2':
-            return data[data['Cluster'] == 'AMD']
-        elif zone == 'N4':
-            return data[data['Cluster'].isin(['DEL', 'NAG', 'JAI', 'LKO'])]
-        else:
-            return data
+def filter_zonal_data(data, zone):
+    if zone == 'N1':
+        return data[data['Lane'].isin(data[data['Cluster'].isin(['DEL', 'JAI', 'LKO'])]['Lane'])]
+    elif zone == 'N2':
+        return data[(data['Cluster'] == 'AMB') & (~data['Lane'].str.contains('IXJ'))]
+    elif zone == 'N3':
+        return data[data['Lane'].str.contains('IXJ')]
+    elif zone == 'S1':
+        return data[(data['Cluster'].isin(['BLR', 'CJB', 'HYD', 'MAA'])) & (~data['Lane'].str.contains('CCJ'))]
+    elif zone == 'S2':
+        return data[data['Lane'].str.contains('CCJ')]
+    elif zone == 'E':
+        return data[(data['Cluster'].isin(['IXW', 'CCU'])) & (~data['Lane'].str.contains('NAG')) | (data['Lane'].str.contains('RPR'))]
+    elif zone == 'W1':
+        return data[(data['Cluster'].isin(['BOM', 'NAG', 'PNQ'])) & (~data['Lane'].str.contains('RPR|GOI'))]
+    elif zone == 'W2':
+        return data[data['Cluster'] == 'AMD']
+    elif zone == 'W3':
+        return data[data['Lane'].str.contains('GOI')]
+    elif zone == 'C':
+        return data[data['Cluster'] == 'IDR']
+    elif zone == 'NE1':
+        return data[(data['Cluster'] == 'GAU') & (data['route_type'] == 'NATIONAL')]
+    elif zone == 'NE2':
+        return data[(data['Cluster'] == 'GAU') & (data['route_type'] == 'REGIONAL')]
+    else:
+        return data
 
     # Logic for Zonal Analysis
     if trend_option == 'Zonal Analysis':
         st.sidebar.header('Zonal Filters')
-        zone_options = ['N1', 'N2', 'N3', 'S1', 'S2', 'E', 'W1', 'W2', 'N4']
+        zone_options = ['N1', 'N2', 'N3', 'S1', 'S2', 'E', 'W1', 'W2','W3', 'C','NE1','NE2']
         selected_zone = st.sidebar.selectbox('Select Zone', zone_options)
 
         # Filter data based on selected zone
