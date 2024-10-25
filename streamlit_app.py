@@ -36,6 +36,16 @@ if uploaded_files:
     st.sidebar.header('Filters')
     vendor_type_filter = st.sidebar.selectbox('Vendor Type', ['All', 'VENDOR_SCHEDULED', 'MARKET', 'FEEDER'])
     
+    # New filters for Route Type, Cluster, and Lane
+    route_type_options = ['All'] + sorted(data['route_type'].dropna().unique().tolist())
+    route_type_filter = st.sidebar.selectbox('Route Type', route_type_options)
+
+    cluster_options = ['All'] + sorted(data['Cluster_Reporting'].dropna().unique().tolist())
+    cluster_filter = st.sidebar.selectbox('Cluster', cluster_options)
+
+    lane_options = ['All'] + sorted(data['Lane'].dropna().unique().tolist())
+    lane_filter = st.sidebar.selectbox('Lane', lane_options)
+
     # Zone filter
     zone_options = ['All'] + sorted(data['Zone'].dropna().unique().tolist())
     zone_filter = st.sidebar.selectbox('Zone', zone_options)
@@ -46,6 +56,18 @@ if uploaded_files:
     # Vendor type filter logic
     if vendor_type_filter != 'All':
         filtered_data = filtered_data[filtered_data['vendor_type'] == vendor_type_filter]
+
+    # Route type filter logic
+    if route_type_filter != 'All':
+        filtered_data = filtered_data[filtered_data['route_type'] == route_type_filter]
+
+    # Cluster filter logic
+    if cluster_filter != 'All':
+        filtered_data = filtered_data[filtered_data['Cluster_Reporting'] == cluster_filter]
+
+    # Lane filter logic
+    if lane_filter != 'All':
+        filtered_data = filtered_data[filtered_data['Lane'] == lane_filter]
 
     # Zone filter logic
     if zone_filter != 'All':
@@ -172,4 +194,4 @@ if uploaded_files:
         plot_zonal_analysis(filtered_data)
 
 else:
-    st.warning('Please upload at least one file to proceed.')
+    st.warning('Please upload at least one Excel file to continue.')
