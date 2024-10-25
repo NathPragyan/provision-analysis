@@ -29,8 +29,8 @@ if uploaded_files:
     # Convert Capacity Moved to tonnes (assuming Capacity Moved is in kg)
     data['Capacity Moved'] = data['Capacity Moved'] / 1000  # 1 tonne = 1000 kg
 
-    # Sidebar options to choose between Load Trend, Cost Trend, and Zonal Analysis
-    trend_option = st.sidebar.selectbox('Choose Trend Type', ['Load Trend', 'Cost Trend', 'Zonal Analysis'])
+    # Sidebar options to choose between Load Trend and Cost Trend
+    trend_option = st.sidebar.selectbox('Choose Trend Type', ['Load Trend', 'Cost Trend'])
 
     # Sidebar filters
     st.sidebar.header('Filters')
@@ -87,23 +87,17 @@ if uploaded_files:
         if any(filtered_data['Lane'].str.startswith(lane_filter.split('-')[0])):
             cluster_filter = lane_filter.split('-')[0]
 
-    # Function to annotate bars with values
+    # Function to annotate bars with formatted values
     def annotate_bars(ax):
-        """
-        Annotates each bar in a bar plot with its height value.
-
-        Parameters:
-        - ax: A Matplotlib Axes object representing the bar plot.
-        """
         for p in ax.patches:
-            ax.annotate(
-                format(p.get_height(), '.1f'), 
-                (p.get_x() + p.get_width() / 2., p.get_height()), 
-                ha='center', 
-                va='center', 
-                xytext=(0, 9), 
-                textcoords='offset points'
-            )
+            value = p.get_height()
+            formatted_value = "{:,.2f}".format(value)
+            ax.annotate(formatted_value,
+                        (p.get_x() + p.get_width() / 2., value),
+                        ha='center', va='bottom',  # Change vertical alignment to bottom
+                        xytext=(0, 3),  # Adjusted to be just above the bar
+                        textcoords='offset points',
+                        fontsize=7)  # Set font size to 7
 
     # Function to plot load trend
     def plot_load_trend(data):
@@ -164,8 +158,9 @@ if uploaded_files:
     # Display the relevant trend based on user selection
     if trend_option == 'Load Trend':
         plot_load_trend(filtered_data)
-    elif trend_option == 'Cost Trend':
+    else:
         plot_cost_trend(filtered_data)
 
 else:
     st.warning('Please upload at least one file to proceed.')
+
