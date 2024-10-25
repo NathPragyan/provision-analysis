@@ -32,60 +32,49 @@ if uploaded_files:
     # Sidebar options to choose between Load Trend, Cost Trend, and Zonal Analysis
     trend_option = st.sidebar.selectbox('Choose Trend Type', ['Load Trend', 'Cost Trend', 'Zonal Analysis'])
 
-    # Sidebar filters for general Load and Cost Trends
-    st.sidebar.header('Filters')
-    route_type_filter = st.sidebar.selectbox('Route Type', ['All', 'REGIONAL', 'NATIONAL'])
-    vendor_type_filter = st.sidebar.selectbox('Vendor Type', ['All', 'VENDOR_SCHEDULED', 'MARKET', 'FEEDER'])
-
-    # Cluster filter with only DEL_NOI option
-    cluster_options = ['All'] + sorted(data['Cluster'].dropna().unique().tolist())
-    if 'DEL' in cluster_options and 'NOI' in cluster_options:
-        cluster_options = [opt for opt in cluster_options if opt not in ['DEL', 'NOI']]  # Remove DEL and NOI
-        cluster_options.append('DEL_NOI')
-    cluster_filter = st.sidebar.selectbox('Cluster', cluster_options)
-
-    # Lane filter options based on the selected cluster
-    if cluster_filter != 'All':
-        if cluster_filter == 'DEL_NOI':
-            lane_options = ['All'] + sorted(data[data['Cluster'].isin(['DEL', 'NOI'])]['Lane'].unique().tolist())
-        else:
-            lane_options = ['All'] + sorted(data[data['Cluster'] == cluster_filter]['Lane'].unique().tolist())
-    else:
-        lane_options = ['All'] + sorted(data['Lane'].dropna().unique().tolist())
-
-    # Lane filter with search functionality
-    lane_filter = st.sidebar.selectbox('Lane', lane_options)
-
-    # Apply filters to the data
+    # Initialize the filtered data variable
     filtered_data = data.copy()
 
-    # Route type filter logic
-    if route_type_filter != 'All':
-        filtered_data = filtered_data[filtered_data['route_type'] == route_type_filter]
+    # Logic for general filters (Load Trend and Cost Trend)
+    if trend_option in ['Load Trend', 'Cost Trend']:
+        st.sidebar.header('Filters')
+        route_type_filter = st.sidebar.selectbox('Route Type', ['All', 'REGIONAL', 'NATIONAL'])
+        vendor_type_filter = st.sidebar.selectbox('Vendor Type', ['All', 'VENDOR_SCHEDULED', 'MARKET', 'FEEDER'])
 
-        # Update lane options based on route type selection
-        lane_options = ['All'] + sorted(filtered_data['Lane'].unique().tolist())
+        # Cluster filter with only DEL_NOI option
+        cluster_options = ['All'] + sorted(data['Cluster'].dropna().unique().tolist())
+        if 'DEL' in cluster_options and 'NOI' in cluster_options:
+            cluster_options = [opt for opt in cluster_options if opt not in ['DEL', 'NOI']]  # Remove DEL and NOI
+            cluster_options.append('DEL_NOI')
+        cluster_filter = st.sidebar.selectbox('Cluster', cluster_options)
 
-    # Vendor type filter logic
-    if vendor_type_filter != 'All':
-        filtered_data = filtered_data[filtered_data['vendor_type'] == vendor_type_filter]
-
-    # Cluster filter logic with DEL_NOI handling
-    if cluster_filter != 'All':
-        if cluster_filter == 'DEL_NOI':
-            # Filter rows where Cluster is either DEL or NOI
-            filtered_data = filtered_data[filtered_data['Cluster'].isin(['DEL', 'NOI'])]
+        # Lane filter options based on the selected cluster
+        if cluster_filter != 'All':
+            if cluster_filter == 'DEL_NOI':
+                lane_options = ['All'] + sorted(data[data['Cluster'].isin(['DEL', 'NOI'])]['Lane'].unique().tolist())
+            else:
+                lane_options = ['All'] + sorted(data[data['Cluster'] == cluster_filter]['Lane'].unique().tolist())
         else:
-            filtered_data = filtered_data[filtered_data['Cluster'] == cluster_filter]
+            lane_options = ['All'] + sorted(data['Lane'].dropna().unique().tolist())
 
-        lane_options = ['All'] + sorted(filtered_data['Lane'].unique().tolist())
+        # Lane filter with search functionality
+        lane_filter = st.sidebar.selectbox('Lane', lane_options)
 
-    # Lane filter logic
-    if lane_filter != 'All':
-        filtered_data = filtered_data[filtered_data['Lane'] == lane_filter]
-        # Automatically set cluster filter based on lane selection
-        if any(filtered_data['Lane'].str.startswith(lane_filter.split('-')[0])):
-            cluster_filter = lane_filter.split('-')[0]
+        # Apply filters to the data
+        if route_type_filter != 'All':
+            filtered_data = filtered_data[filtered_data['route_type'] == route_type_filter]
+        
+        if vendor_type_filter != 'All':
+            filtered_data = filtered_data[filtered_data['vendor_type'] == vendor_type_filter]
+
+        if cluster_filter != 'All':
+            if cluster_filter == 'DEL_NOI':
+                filtered_data = filtered_data[filtered_data['Cluster'].isin(['DEL', 'NOI'])]
+            else:
+                filtered_data = filtered_data[filtered_data['Cluster'] == cluster_filter]
+
+        if lane_filter != 'All':
+            filtered_data = filtered_data[filtered_data['Lane'] == lane_filter]
 
     # Function to annotate bars with formatted values
     def annotate_bars(ax):
@@ -144,7 +133,7 @@ if uploaded_files:
         st.pyplot(plt)
 
         # Monthly comparison of section cost
-        cost_column = 'Section Cost (Crores)' if cluster_filter == 'All' and lane_filter == 'All' else 'Section Cost (Lakhs)'
+        cost_column = 'Section Cost (Crores)' if filtered_data.empty else 'Section Cost (Lakhs)'
         monthly_cost = data.groupby('Month')[cost_column].sum().reset_index()
 
         plt.figure(figsize=(8, 6))
@@ -192,13 +181,6 @@ if uploaded_files:
 
         # Plot Cost Trend for selected zone
         plot_cost_trend(zonal_data)
-
-    # Logic for Load Trend and Cost Trend
-    elif trend_option == 'Load Trend':
-        plot_load_trend(filtered_data)
-
-    elif trend_option == 'Cost Trend':
-        plot_cost_trend(filtered_data)
 
 else:
     st.warning('Please upload at least one data file to continue.')
