@@ -29,10 +29,10 @@ if uploaded_files:
     # Convert Capacity Moved to tonnes (assuming Capacity Moved is in kg)
     data['Capacity Moved'] = data['Capacity Moved'] / 1000  # 1 tonne = 1000 kg
 
-    # Sidebar options to choose between Load Trend and Cost Trend
-    trend_option = st.sidebar.selectbox('Choose Trend Type', ['Load Trend', 'Cost Trend'])
+    # Sidebar options to choose between Load Trend, Cost Trend, and Zonal Analysis
+    trend_option = st.sidebar.selectbox('Choose Trend Type', ['Load Trend', 'Cost Trend', 'Zonal Analysis'])
 
-    # Sidebar filters
+    # Sidebar filters for general Load and Cost Trends
     st.sidebar.header('Filters')
     route_type_filter = st.sidebar.selectbox('Route Type', ['All', 'REGIONAL', 'NATIONAL'])
     vendor_type_filter = st.sidebar.selectbox('Vendor Type', ['All', 'VENDOR_SCHEDULED', 'MARKET', 'FEEDER'])
@@ -150,16 +150,55 @@ if uploaded_files:
         plt.figure(figsize=(8, 6))
         ax = sns.barplot(data=monthly_cost, x='Month', y=cost_column, color='red', ci=None)
         annotate_bars(ax)
-        plt.title(f' Cost - Monthly Comparison ({cost_column.split()[2]})')
+        plt.title(f'Cost - Monthly Comparison ({cost_column.split()[2]})')
         plt.xlabel('Month')
         plt.ylabel(f'Total Cost ({cost_column.split()[2]})')
         st.pyplot(plt)
 
-    # Display the relevant trend based on user selection
-    if trend_option == 'Load Trend':
+    # Function to filter data based on zones
+    def filter_zonal_data(data, zone):
+        if zone == 'N1':
+            return data[data['Lane'].isin(data[data['Cluster'].isin(['DEL', 'JAI', 'LKO'])]['Lane'])]
+        elif zone == 'N2':
+            return data[(data['Cluster'] == 'AMB') & (~data['Lane'].str.contains('IXJ'))]
+        elif zone == 'N3':
+            return data[data['Lane'].str.contains('IXJ')]
+        elif zone == 'S1':
+            return data[(data['Cluster'].isin(['BLR', 'CJB', 'HYD', 'MAA'])) & (~data['Lane'].str.contains('CCJ'))]
+        elif zone == 'S2':
+            return data[data['Lane'].str.contains('CCJ')]
+        elif zone == 'E':
+            return data[(data['Cluster'].isin(['IXW', 'CCU'])) & (~data['Lane'].str.contains('NAG')) | (data['Lane'].str.contains('RPR'))]
+        elif zone == 'W1':
+            return data[(data['Cluster'].isin(['BOM', 'NAG', 'PNQ'])) & (~data['Lane'].str.contains('RPR|GOI'))]
+        elif zone == 'W2':
+            return data[data['Cluster'] == 'AMD']
+        elif zone == 'N4':
+            return data[data['Cluster'].isin(['DEL', 'NAG', 'JAI', 'LKO'])]
+        else:
+            return data
+
+    # Logic for Zonal Analysis
+    if trend_option == 'Zonal Analysis':
+        st.sidebar.header('Zonal Filters')
+        zone_options = ['N1', 'N2', 'N3', 'S1', 'S2', 'E', 'W1', 'W2', 'N4']
+        selected_zone = st.sidebar.selectbox('Select Zone', zone_options)
+
+        # Filter data based on selected zone
+        zonal_data = filter_zonal_data(data, selected_zone)
+
+        # Plot Load Trend for selected zone
+        plot_load_trend(zonal_data)
+
+        # Plot Cost Trend for selected zone
+        plot_cost_trend(zonal_data)
+
+    # Logic for Load Trend and Cost Trend
+    elif trend_option == 'Load Trend':
         plot_load_trend(filtered_data)
-    else:
+
+    elif trend_option == 'Cost Trend':
         plot_cost_trend(filtered_data)
 
 else:
-    st.warning('Please upload at least one file to proceed.')
+    st.warning('Please upload at least one data file to continue.')
