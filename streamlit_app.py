@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # Set page title
-st.title('Provision Analysis: Load Trend, Cost Trend, and Zonal Analysis')
+st.title('Provision Analysis: Load Trend and Cost Trend')
 
 # Sidebar to upload multiple files
 st.sidebar.header('Upload your Data Files')
@@ -63,6 +63,9 @@ if uploaded_files:
     if route_type_filter != 'All':
         filtered_data = filtered_data[filtered_data['route_type'] == route_type_filter]
 
+        # Update lane options based on route type selection
+        lane_options = ['All'] + sorted(filtered_data['Lane'].unique().tolist())
+
     # Vendor type filter logic
     if vendor_type_filter != 'All':
         filtered_data = filtered_data[filtered_data['vendor_type'] == vendor_type_filter]
@@ -70,165 +73,99 @@ if uploaded_files:
     # Cluster filter logic with DEL_NOI handling
     if cluster_filter != 'All':
         if cluster_filter == 'DEL_NOI':
+            # Filter rows where Cluster is either DEL or NOI
             filtered_data = filtered_data[filtered_data['Cluster'].isin(['DEL', 'NOI'])]
         else:
             filtered_data = filtered_data[filtered_data['Cluster'] == cluster_filter]
 
+        lane_options = ['All'] + sorted(filtered_data['Lane'].unique().tolist())
+
     # Lane filter logic
     if lane_filter != 'All':
         filtered_data = filtered_data[filtered_data['Lane'] == lane_filter]
+        # Automatically set cluster filter based on lane selection
+        if any(filtered_data['Lane'].str.startswith(lane_filter.split('-')[0])):
+            cluster_filter = lane_filter.split('-')[0]
 
-    # Zonal definitions
-    zone_mapping = {
-        'N1': ['DEL', 'JAI', 'LKO'],
-        'N2': ['AMB'],
-        'N3': ['IXJ'],
-        'S1': ['BLR', 'CJB', 'HYD', 'MAA'],
-        'S2': ['CCJ'],
-        'E': ['IXW', 'CCU'],
-        'W1': ['BOM', 'NAG', 'PNQ'],
-        'W2': ['AMD'],
-        'W3': ['GOI'],
-        'C': ['IDR'],
-        'NE1': ['GAU'],
-        'NE2': ['GAU']
-    }
+    # Function to annotate bars with values
+    def annotate_bars(ax):
+        """
+        Annotates each bar in a bar plot with its height value.
 
-    # Function to filter data by zone
-    def filter_by_zone(data, zone):
-        if zone == 'N2':
-            return data[(data['Cluster'] == 'AMB') & (~data['Lane'].str.contains('IXJ'))]
-        elif zone == 'S1':
-            return data[(data['Cluster'].isin(['BLR', 'CJB', 'HYD', 'MAA'])) & (~data['Lane'].str.contains('CCJ'))]
-        elif zone == 'E':
-            return data[(data['Cluster'].isin(['IXW', 'CCU'])) & (data['Lane'].str.contains('RPR') | ~data['Lane'].str.contains('NAG'))]
-        elif zone == 'W1':
-            return data[(data['Cluster'].isin(['BOM', 'NAG', 'PNQ'])) & (~data['Lane'].str.contains('RPR|GOI'))]
-        elif zone == 'NE1':
-            return data[(data['Cluster'] == 'GAU') & (data['route_type'] == 'NATIONAL')]
-        elif zone == 'NE2':
-            return data[(data['Cluster'] == 'GAU') & (data['route_type'] == 'REGIONAL')]
-        else:
-            return data[data['Cluster'].isin(zone_mapping[zone])]
-
-    # Zonal analysis functionality
-    if trend_option == 'Zonal Analysis':
-        # Zone filter
-        zone_filter = st.sidebar.selectbox('Zone', list(zone_mapping.keys()))
-
-        # Filter data by the selected zone
-        zonal_data = filter_by_zone(filtered_data, zone_filter)
-
-        # Function to annotate bars with formatted values
-        def annotate_bars(ax):
-            for p in ax.patches:
-                value = p.get_height()
-                formatted_value = "{:,.2f}".format(value)
-                ax.annotate(formatted_value,
-                            (p.get_x() + p.get_width() / 2., value),
-                            ha='center', va='bottom',  # Change vertical alignment to bottom
-                            xytext=(0, 3),  # Adjusted to be just above the bar
-                            textcoords='offset points',
-                            fontsize=7)  # Set font size to 7
-
-        # Weekly Cost Analysis
-        plt.figure(figsize=(10, 6))
-        weekly_cost = zonal_data.groupby('Week No')['Section Cost (Lakhs)'].sum().reset_index()
-        ax = sns.barplot(data=weekly_cost, x='Week No', y='Section Cost (Lakhs)', ci=None)
-        annotate_bars(ax)
-        plt.title('Weekly Cost Analysis (Lakhs)')
-        plt.xlabel('Week Number')
-        plt.ylabel('Cost (Lakhs)')
-        st.pyplot(plt)
-
-        # Monthly Cost Analysis
-        plt.figure(figsize=(10, 6))
-        monthly_cost = zonal_data.groupby('Month')['Section Cost (Lakhs)'].sum().reset_index()
-        ax = sns.barplot(data=monthly_cost, x='Month', y='Section Cost (Lakhs)', ci=None)
-        annotate_bars(ax)
-        plt.title('Monthly Cost Analysis (Lakhs)')
-        plt.xlabel('Month')
-        plt.ylabel('Cost (Lakhs)')
-        st.pyplot(plt)
-
-        # Weekly Capacity Moved Analysis
-        plt.figure(figsize=(10, 6))
-        weekly_capacity = zonal_data.groupby('Week No')['Capacity Moved'].sum().reset_index()
-        ax = sns.barplot(data=weekly_capacity, x='Week No', y='Capacity Moved', ci=None)
-        annotate_bars(ax)
-        plt.title('Weekly Capacity Moved (Tonnes)')
-        plt.xlabel('Week Number')
-        plt.ylabel('Capacity Moved (Tonnes)')
-        st.pyplot(plt)
-
-        # Monthly Capacity Moved Analysis
-        plt.figure(figsize=(10, 6))
-        monthly_capacity = zonal_data.groupby('Month')['Capacity Moved'].sum().reset_index()
-        ax = sns.barplot(data=monthly_capacity, x='Month', y='Capacity Moved', ci=None)
-        annotate_bars(ax)
-        plt.title('Monthly Capacity Moved (Tonnes)')
-        plt.xlabel('Month')
-        plt.ylabel('Capacity Moved (Tonnes)')
-        st.pyplot(plt)
+        Parameters:
+        - ax: A Matplotlib Axes object representing the bar plot.
+        """
+        for p in ax.patches:
+            ax.annotate(
+                format(p.get_height(), '.1f'), 
+                (p.get_x() + p.get_width() / 2., p.get_height()), 
+                ha='center', 
+                va='center', 
+                xytext=(0, 9), 
+                textcoords='offset points'
+            )
 
     # Function to plot load trend
     def plot_load_trend(data):
         st.subheader('Load Trend Analysis (in Tonnes)')
 
-        # Group data by 'Week No' and 'Month' for weekly/monthly analysis
-        weekly_data = data.groupby('Week No')['Capacity Moved'].sum().reset_index()
-        monthly_data = data.groupby('Month')['Capacity Moved'].sum().reset_index()
+        # Group data by 'Week No' and 'Month' for weekly comparison of capacity moved
+        weekly_capacity = data.groupby(['Week No', 'Month'])['Capacity Moved'].sum().reset_index()
 
-        # Weekly Load Analysis
+        # Weekly comparison of capacity moved
         plt.figure(figsize=(10, 6))
-        ax = sns.barplot(data=weekly_data, x='Week No', y='Capacity Moved', ci=None)
+        ax = sns.barplot(data=weekly_capacity, x='Week No', y='Capacity Moved', hue='Month', ci=None)
         annotate_bars(ax)
-        plt.title('Weekly Load Analysis')
+        plt.title('Capacity Moved - Weekly Comparison')
         plt.xlabel('Week Number')
         plt.ylabel('Capacity Moved (Tonnes)')
+        plt.legend(title='Month')
         st.pyplot(plt)
 
-        # Monthly Load Analysis
-        plt.figure(figsize=(10, 6))
-        ax = sns.barplot(data=monthly_data, x='Month', y='Capacity Moved', ci=None)
+        # Monthly comparison of capacity moved
+        plt.figure(figsize=(8, 6))
+        monthly_capacity = data.groupby('Month')['Capacity Moved'].sum().reset_index()
+        ax = sns.barplot(data=monthly_capacity, x='Month', y='Capacity Moved', color='green', ci=None)
         annotate_bars(ax)
-        plt.title('Monthly Load Analysis')
+        plt.title('Capacity Moved - Monthly Comparison')
         plt.xlabel('Month')
-        plt.ylabel('Capacity Moved (Tonnes)')
+        plt.ylabel('Total Capacity Moved (Tonnes)')
         st.pyplot(plt)
 
     # Function to plot cost trend
     def plot_cost_trend(data):
         st.subheader('Cost Trend Analysis')
 
-        # Group data by 'Week No' and 'Month' for weekly/monthly analysis
-        weekly_data = data.groupby('Week No')['Section Cost (Lakhs)'].sum().reset_index()
-        monthly_data = data.groupby('Month')['Section Cost (Lakhs)'].sum().reset_index()
+        # Group data by 'Week No' and 'Month' for weekly comparison of section cost
+        weekly_cost = data.groupby(['Week No', 'Month'])['Section Cost (Lakhs)'].sum().reset_index()
 
-        # Weekly Cost Analysis
+        # Weekly comparison of section cost in lakhs
         plt.figure(figsize=(10, 6))
-        ax = sns.barplot(data=weekly_data, x='Week No', y='Section Cost (Lakhs)', ci=None)
+        ax = sns.barplot(data=weekly_cost, x='Week No', y='Section Cost (Lakhs)', hue='Month', ci=None)
         annotate_bars(ax)
-        plt.title('Weekly Cost Analysis')
+        plt.title('Cost - Weekly Comparison (in Lakhs)')
         plt.xlabel('Week Number')
         plt.ylabel('Cost (Lakhs)')
+        plt.legend(title='Month')
         st.pyplot(plt)
 
-        # Monthly Cost Analysis
-        plt.figure(figsize=(10, 6))
-        ax = sns.barplot(data=monthly_data, x='Month', y='Section Cost (Lakhs)', ci=None)
+        # Monthly comparison of section cost
+        cost_column = 'Section Cost (Crores)' if cluster_filter == 'All' and lane_filter == 'All' else 'Section Cost (Lakhs)'
+        monthly_cost = data.groupby('Month')[cost_column].sum().reset_index()
+
+        plt.figure(figsize=(8, 6))
+        ax = sns.barplot(data=monthly_cost, x='Month', y=cost_column, color='red', ci=None)
         annotate_bars(ax)
-        plt.title('Monthly Cost Analysis')
+        plt.title(f' Cost - Monthly Comparison ({cost_column.split()[2]})')
         plt.xlabel('Month')
-        plt.ylabel('Cost (Lakhs)')
+        plt.ylabel(f'Total Cost ({cost_column.split()[2]})')
         st.pyplot(plt)
 
-    # Trend analysis functionality
+    # Display the relevant trend based on user selection
     if trend_option == 'Load Trend':
         plot_load_trend(filtered_data)
-
     elif trend_option == 'Cost Trend':
         plot_cost_trend(filtered_data)
 
 else:
-    st.info('Please upload Excel files to proceed.')
+    st.warning('Please upload at least one file to proceed.')
