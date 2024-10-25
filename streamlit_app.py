@@ -145,48 +145,61 @@ if uploaded_files:
         st.pyplot(plt)
 
     # Function to filter data based on zones
-def filter_zonal_data(data, zone):
-    if zone == 'N1':
-        return data[data['Lane'].isin(data[data['Cluster'].isin(['DEL', 'JAI', 'LKO'])]['Lane'])]
-    elif zone == 'N2':
-        return data[(data['Cluster'] == 'AMB') & (~data['Lane'].str.contains('IXJ'))]
-    elif zone == 'N3':
-        return data[data['Lane'].str.contains('IXJ')]
-    elif zone == 'S1':
-        return data[(data['Cluster'].isin(['BLR', 'CJB', 'HYD', 'MAA'])) & (~data['Lane'].str.contains('CCJ'))]
-    elif zone == 'S2':
-        return data[data['Lane'].str.contains('CCJ')]
-    elif zone == 'E':
-        return data[(data['Cluster'].isin(['IXW', 'CCU'])) & (~data['Lane'].str.contains('NAG')) | (data['Lane'].str.contains('RPR'))]
-    elif zone == 'W1':
-        return data[(data['Cluster'].isin(['BOM', 'NAG', 'PNQ'])) & (~data['Lane'].str.contains('RPR|GOI'))]
-    elif zone == 'W2':
-        return data[data['Cluster'] == 'AMD']
-    elif zone == 'W3':
-        return data[data['Lane'].str.contains('GOI')]
-    elif zone == 'C':
-        return data[data['Cluster'] == 'IDR']
-    elif zone == 'NE1':
-        return data[(data['Cluster'] == 'GAU') & (data['route_type'] == 'NATIONAL')]
-    elif zone == 'NE2':
-        return data[(data['Cluster'] == 'GAU') & (data['route_type'] == 'REGIONAL')]
-    else:
-        return data
+    def filter_zonal_data(data, zone):
+        if zone == 'N1':
+            return data[data['Lane'].isin(data[data['Cluster'].isin(['DEL', 'JAI', 'LKO'])]['Lane'])]
+        elif zone == 'N2':
+            return data[(data['Cluster'] == 'AMB') & (~data['Lane'].str.contains('IXJ'))]
+        elif zone == 'N3':
+            return data[data['Lane'].str.contains('IXJ')]
+        elif zone == 'S1':
+            return data[(data['Cluster'].isin(['BLR', 'CJB', 'HYD', 'MAA'])) & (~data['Lane'].str.contains('CCJ'))]
+        elif zone == 'S2':
+            return data[data['Lane'].str.contains('CCJ')]
+        elif zone == 'E':
+            return data[(data['Cluster'].isin(['IXW', 'CCU'])) & (~data['Lane'].str.contains('NAG')) | (data['Lane'].str.contains('RPR'))]
+        elif zone == 'W1':
+            return data[(data['Cluster'].isin(['BOM', 'NAG', 'PNQ'])) & (~data['Lane'].str.contains('RPR|GOI'))]
+        elif zone == 'W2':
+            return data[data['Cluster'] == 'AMD']
+        elif zone == 'W3':
+            return data[data['Lane'].str.contains('GOI')]
+        elif zone == 'C':
+            return data[data['Cluster'] == 'IDR']
+        elif zone == 'NE1':
+            return data[(data['Cluster'] == 'GAU') & (data['route_type'] == 'NATIONAL')]
+        elif zone == 'NE2':
+            return data[(data['Cluster'] == 'GAU') & (data['route_type'] == 'REGIONAL')]
+        else:
+            return data
 
     # Logic for Zonal Analysis
     if trend_option == 'Zonal Analysis':
         st.sidebar.header('Zonal Filters')
-        zone_options = ['N1', 'N2', 'N3', 'S1', 'S2', 'E', 'W1', 'W2','W3', 'C', 'NE1', 'NE2']
+        zone_options = ['N1', 'N2', 'N3', 'S1', 'S2', 'E', 'W1', 'W2', 'W3', 'C', 'NE1', 'NE2']
         selected_zone = st.sidebar.selectbox('Select Zone', zone_options)
 
         # Filter data based on selected zone
         zonal_data = filter_zonal_data(data, selected_zone)
 
-        # Plot Load Trend for selected zone
-        plot_load_trend(zonal_data)
+        # Display a message if no data is available after filtering
+        if zonal_data.empty:
+            st.warning(f"No data available for the selected zone: {selected_zone}")
+        else:
+            # Plot Load Trend for the selected zone
+            plot_load_trend(zonal_data)
 
-        # Plot Cost Trend for selected zone
-        plot_cost_trend(zonal_data)
+            # Plot Cost Trend for the selected zone
+            plot_cost_trend(zonal_data)
 
+    # Logic for Load Trend or Cost Trend analysis
+    elif trend_option in ['Load Trend', 'Cost Trend']:
+        if filtered_data.empty:
+            st.warning("No data available for the selected filters.")
+        else:
+            if trend_option == 'Load Trend':
+                plot_load_trend(filtered_data)
+            elif trend_option == 'Cost Trend':
+                plot_cost_trend(filtered_data)
 else:
     st.warning('Please upload at least one data file to continue.')
