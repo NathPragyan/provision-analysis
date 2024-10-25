@@ -176,7 +176,7 @@ def filter_zonal_data(data, zone):
     # Logic for Zonal Analysis
     if trend_option == 'Zonal Analysis':
         st.sidebar.header('Zonal Filters')
-        zone_options = ['N1', 'N2', 'N3', 'S1', 'S2', 'E', 'W1', 'W2','W3', 'C','NE1','NE2']
+        zone_options = ['N1', 'N2', 'N3', 'S1', 'S2', 'E', 'W1', 'W2','W3', 'C', 'NE1', 'NE2']
         selected_zone = st.sidebar.selectbox('Select Zone', zone_options)
 
         # Filter data based on selected zone
