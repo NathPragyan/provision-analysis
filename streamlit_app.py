@@ -86,7 +86,7 @@ if uploaded_files:
                         ha='center', va='bottom',  # Change vertical alignment to bottom
                         xytext=(0, 3),  # Adjusted to be just above the bar
                         textcoords='offset points',
-                        fontsize=5)  # Set font size to 7
+                        fontsize=4.5)  # Set font size to 7
 
     # Function to plot load trend
     def plot_load_trend(data):
