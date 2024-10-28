@@ -22,6 +22,15 @@ if uploaded_files:
     # Extract month from the date column
     data['Month'] = data['Start_location_scheduled_dispatch_time'].dt.month_name()
 
+    # Define the correct order for the months
+    month_order = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+    ]
+
+    # Convert 'Month' column to categorical type with specified order
+    data['Month'] = pd.Categorical(data['Month'], categories=month_order, ordered=True)
+
     # Convert Section Cost for different views (weekly in lakhs, monthly in crores)
     data['Section Cost (Lakhs)'] = data['Section Cost'] / 10**5  # 1 lakh = 10^5
     data['Section Cost (Crores)'] = data['Section Cost'] / 10**7  # 1 crore = 10^7
