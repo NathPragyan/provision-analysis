@@ -118,14 +118,16 @@ if uploaded_files:
         plt.figure(figsize=(8, 6))
         monthly_capacity = data.groupby('Month')['Capacity Moved'].sum().reset_index()
         
-        # Filter to keep only months that exist in the data
-        months_in_data = monthly_capacity['Month'].tolist()
-        ax = sns.barplot(data=monthly_capacity[monthly_capacity['Month'].isin(months_in_data)], x='Month', y='Capacity Moved', color='green', ci=None)
+        # Get unique months in data for x-axis
+        months_in_data = monthly_capacity['Month'].unique()
+        ax = sns.barplot(data=monthly_capacity, x='Month', y='Capacity Moved', color='green', ci=None)
+        ax.set_xticks(months_in_data)  # Set x-ticks to only the months in data
+        ax.set_xticklabels(months_in_data, rotation=45)  # Set month labels and rotate for better visibility
+        
         annotate_bars(ax)
         plt.title('Capacity Moved - Monthly Comparison')
         plt.xlabel('Month')
         plt.ylabel('Total Capacity Moved (Tonnes)')
-        plt.xticks(rotation=45)  # Rotate x-axis labels for better readability
         st.pyplot(plt)
 
     # Function to plot cost trend
@@ -146,19 +148,20 @@ if uploaded_files:
         st.pyplot(plt)
 
         # Monthly comparison of section cost
-        cost_column = 'Section Cost (Crores)' if filtered_data.empty else 'Section Cost (Lakhs)'
-        monthly_cost = data.groupby('Month')[cost_column].sum().reset_index()
+        monthly_cost = data.groupby('Month')['Section Cost (Crores)'].sum().reset_index()
 
         plt.figure(figsize=(8, 6))
         
-        # Filter to keep only months that exist in the data
-        months_in_data = monthly_cost['Month'].tolist()
-        ax = sns.barplot(data=monthly_cost[monthly_cost['Month'].isin(months_in_data)], x='Month', y=cost_column, color='red', ci=None)
+        # Get unique months in data for x-axis
+        months_in_data = monthly_cost['Month'].unique()
+        ax = sns.barplot(data=monthly_cost, x='Month', y='Section Cost (Crores)', color='red', ci=None)
+        ax.set_xticks(months_in_data)  # Set x-ticks to only the months in data
+        ax.set_xticklabels(months_in_data, rotation=45)  # Set month labels and rotate for better visibility
+        
         annotate_bars(ax)
-        plt.title(f'Cost - Monthly Comparison ({cost_column.split()[2]})')
+        plt.title('Cost - Monthly Comparison (in Crores)')
         plt.xlabel('Month')
-        plt.ylabel(f'Total Cost ({cost_column.split()[2]})')
-        plt.xticks(rotation=45)  # Rotate x-axis labels for better readability
+        plt.ylabel('Total Cost (Crores)')
         st.pyplot(plt)
 
     # Function to filter data based on zones
@@ -174,7 +177,7 @@ if uploaded_files:
         elif zone == 'S2':
             return data[data['Lane'].str.contains('CCJ')]
         elif zone == 'E':
-            return data[(data['Cluster'].isin(['IXW', 'CCU'])) & (~data['Lane'].str.contains('IXB'))]
+            return data[data['Lane'].str.contains('IXB') & (~data['Lane'].str.contains('IXJ'))]
         elif zone == 'W1':
             return data[data['Cluster'].isin(['JAI', 'DEL'])]
         elif zone == 'W2':
