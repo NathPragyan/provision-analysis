@@ -117,11 +117,13 @@ if uploaded_files:
         # Monthly comparison of capacity moved
         plt.figure(figsize=(8, 6))
         monthly_capacity = data.groupby('Month')['Capacity Moved'].sum().reset_index()
-        
+
         # Get unique months in data for x-axis
         months_in_data = monthly_capacity['Month'].unique()
         ax = sns.barplot(data=monthly_capacity, x='Month', y='Capacity Moved', color='green', ci=None)
-        ax.set_xticks(months_in_data)  # Set x-ticks to only the months in data
+        
+        # Set x-ticks to only the months in data
+        ax.set_xticks(range(len(months_in_data)))  # Set ticks to the number of unique months
         ax.set_xticklabels(months_in_data, rotation=45)  # Set month labels and rotate for better visibility
         
         annotate_bars(ax)
@@ -155,7 +157,9 @@ if uploaded_files:
         # Get unique months in data for x-axis
         months_in_data = monthly_cost['Month'].unique()
         ax = sns.barplot(data=monthly_cost, x='Month', y='Section Cost (Crores)', color='red', ci=None)
-        ax.set_xticks(months_in_data)  # Set x-ticks to only the months in data
+        
+        # Set x-ticks to only the months in data
+        ax.set_xticks(range(len(months_in_data)))  # Set ticks to the number of unique months
         ax.set_xticklabels(months_in_data, rotation=45)  # Set month labels and rotate for better visibility
         
         annotate_bars(ax)
