@@ -22,6 +22,10 @@ if uploaded_files:
     # Extract month from the date column
     data['Month'] = data['Start_location_scheduled_dispatch_time'].dt.month_name()
 
+    # Set the month column as a categorical type with the correct order
+    month_order = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+    data['Month'] = pd.Categorical(data['Month'], categories=month_order, ordered=True)
+
     # Convert Section Cost for different views (weekly in lakhs, monthly in crores)
     data['Section Cost (Lakhs)'] = data['Section Cost'] / 10**5  # 1 lakh = 10^5
     data['Section Cost (Crores)'] = data['Section Cost'] / 10**7  # 1 crore = 10^7
@@ -113,6 +117,7 @@ if uploaded_files:
         plt.title('Capacity Moved - Monthly Comparison')
         plt.xlabel('Month')
         plt.ylabel('Total Capacity Moved (Tonnes)')
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=45)  # Rotate x labels for better visibility
         st.pyplot(plt)
 
     # Function to plot cost trend
@@ -142,6 +147,7 @@ if uploaded_files:
         plt.title(f'Cost - Monthly Comparison ({cost_column.split()[2]})')
         plt.xlabel('Month')
         plt.ylabel(f'Total Cost ({cost_column.split()[2]})')
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=45)  # Rotate x labels for better visibility
         st.pyplot(plt)
 
     # Function to filter data based on zones
