@@ -92,37 +92,23 @@ if uploaded_files:
             formatted_value = "{:,.2f}".format(value)
             ax.annotate(formatted_value,
                         (p.get_x() + p.get_width() / 2., value),
-                        ha='center', va='bottom',  # Change vertical alignment to bottom
+                        ha='center', va='bottom',
                         xytext=(0, 3),  # Adjusted to be just above the bar
                         textcoords='offset points',
-                        fontsize=4.5)  # Set font size to 7
+                        fontsize=8)  # Set font size to 8
 
     # Function to plot load trend
     def plot_load_trend(data):
         st.subheader('Load Trend Analysis (in Tonnes)')
 
-        # Group data by 'Week No' and 'Month' for weekly comparison of capacity moved
-        weekly_capacity = data.groupby(['Week No', 'Month'])['Capacity Moved'].sum().reset_index()
-
-        # Weekly comparison of capacity moved
-        plt.figure(figsize=(10, 6))
-        ax = sns.barplot(data=weekly_capacity, x='Week No', y='Capacity Moved', hue='Month', ci=None)
-        annotate_bars(ax)
-        plt.title('Capacity Moved - Weekly Comparison')
-        plt.xlabel('Week Number')
-        plt.ylabel('Capacity Moved (Tonnes)')
-        plt.legend(title='Month')
-        st.pyplot(plt)
-
         # Monthly comparison of capacity moved
-        plt.figure(figsize=(8, 6))
         monthly_capacity = data.groupby('Month')['Capacity Moved'].sum().reset_index()
+
+        plt.figure(figsize=(8, 6))
+        ax = sns.barplot(data=monthly_capacity, x='Month', y='Capacity Moved', color='green', ci=None)
 
         # Get unique months in data for x-axis
         months_in_data = monthly_capacity['Month'].unique()
-        ax = sns.barplot(data=monthly_capacity, x='Month', y='Capacity Moved', color='green', ci=None)
-        
-        # Set x-ticks to only the months in data
         ax.set_xticks(range(len(months_in_data)))  # Set ticks to the number of unique months
         ax.set_xticklabels(months_in_data, rotation=45)  # Set month labels and rotate for better visibility
         
@@ -136,29 +122,15 @@ if uploaded_files:
     def plot_cost_trend(data):
         st.subheader('Cost Trend Analysis')
 
-        # Group data by 'Week No' and 'Month' for weekly comparison of section cost
-        weekly_cost = data.groupby(['Week No', 'Month'])['Section Cost (Lakhs)'].sum().reset_index()
-
-        # Weekly comparison of section cost in lakhs
-        plt.figure(figsize=(10, 6))
-        ax = sns.barplot(data=weekly_cost, x='Week No', y='Section Cost (Lakhs)', hue='Month', ci=None)
-        annotate_bars(ax)
-        plt.title('Cost - Weekly Comparison (in Lakhs)')
-        plt.xlabel('Week Number')
-        plt.ylabel('Cost (Lakhs)')
-        plt.legend(title='Month')
-        st.pyplot(plt)
-
         # Monthly comparison of section cost
         monthly_cost = data.groupby('Month')['Section Cost (Crores)'].sum().reset_index()
 
         plt.figure(figsize=(8, 6))
         
+        ax = sns.barplot(data=monthly_cost, x='Month', y='Section Cost (Crores)', color='red', ci=None)
+
         # Get unique months in data for x-axis
         months_in_data = monthly_cost['Month'].unique()
-        ax = sns.barplot(data=monthly_cost, x='Month', y='Section Cost (Crores)', color='red', ci=None)
-        
-        # Set x-ticks to only the months in data
         ax.set_xticks(range(len(months_in_data)))  # Set ticks to the number of unique months
         ax.set_xticklabels(months_in_data, rotation=45)  # Set month labels and rotate for better visibility
         
@@ -168,56 +140,8 @@ if uploaded_files:
         plt.ylabel('Total Cost (Crores)')
         st.pyplot(plt)
 
-    # Function to filter data based on zones
-    def filter_zonal_data(data, zone):
-        if zone == 'N1':
-            return data[data['Lane'].isin(data[data['Cluster'].isin(['DEL', 'JAI', 'LKO'])]['Lane'])]
-        elif zone == 'N2':
-            return data[(data['Cluster'] == 'AMB') & (~data['Lane'].str.contains('IXJ'))]
-        elif zone == 'N3':
-            return data[data['Lane'].str.contains('IXJ')]
-        elif zone == 'S1':
-            return data[(data['Cluster'].isin(['BLR', 'CJB', 'HYD', 'MAA'])) & (~data['Lane'].str.contains('CCJ'))]
-        elif zone == 'S2':
-            return data[data['Lane'].str.contains('CCJ')]
-        elif zone == 'E':
-            return data[data['Lane'].str.contains('IXB') & (~data['Lane'].str.contains('IXJ'))]
-        elif zone == 'W1':
-            return data[data['Cluster'].isin(['JAI', 'DEL'])]
-        elif zone == 'W2':
-            return data[data['Cluster'].isin(['LKO', 'KAN'])]
-        elif zone == 'W3':
-            return data[data['Cluster'].isin(['IND', 'GOA'])]
-        elif zone == 'C':
-            return data[(data['Cluster'] == 'GAU') & (data['route_type'] == 'NATIONAL')]
-        elif zone == 'NE1':
-            return data[(data['Cluster'] == 'GAU') & (data['route_type'] == 'NATIONAL')]
-        elif zone == 'NE2':
-            return data[(data['Cluster'] == 'GAU') & (data['route_type'] == 'REGIONAL')]
-        else:
-            return data
-
-    # Logic for Zonal Analysis
-    if trend_option == 'Zonal Analysis':
-        st.sidebar.header('Zonal Filters')
-        zone_options = ['N1', 'N2', 'N3', 'S1', 'S2', 'E', 'W1', 'W2', 'W3', 'C', 'NE1', 'NE2']
-        selected_zone = st.sidebar.selectbox('Select Zone', zone_options)
-
-        # Filter data based on selected zone
-        zonal_data = filter_zonal_data(data, selected_zone)
-
-        # Display a message if no data is available after filtering
-        if zonal_data.empty:
-            st.warning(f"No data available for the selected zone: {selected_zone}")
-        else:
-            # Plot Load Trend for the selected zone
-            plot_load_trend(zonal_data)
-
-            # Plot Cost Trend for the selected zone
-            plot_cost_trend(zonal_data)
-
     # Logic for Load Trend or Cost Trend analysis
-    elif trend_option in ['Load Trend', 'Cost Trend']:
+    if trend_option in ['Load Trend', 'Cost Trend']:
         if filtered_data.empty:
             st.warning("No data available for the selected filters.")
         else:
