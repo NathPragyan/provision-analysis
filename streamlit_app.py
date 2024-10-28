@@ -22,13 +22,13 @@ if uploaded_files:
     # Extract month from the date column
     data['Month'] = data['Start_location_scheduled_dispatch_time'].dt.month_name()
 
-    # Define the correct order for the months
+    # Convert 'Month' column to categorical type for correct order
     month_order = [
         'January', 'February', 'March', 'April', 'May', 'June',
         'July', 'August', 'September', 'October', 'November', 'December'
     ]
 
-    # Convert 'Month' column to categorical type with specified order
+    # Create a categorical variable for 'Month' based on the month_order
     data['Month'] = pd.Categorical(data['Month'], categories=month_order, ordered=True)
 
     # Convert Section Cost for different views (weekly in lakhs, monthly in crores)
@@ -117,11 +117,15 @@ if uploaded_files:
         # Monthly comparison of capacity moved
         plt.figure(figsize=(8, 6))
         monthly_capacity = data.groupby('Month')['Capacity Moved'].sum().reset_index()
-        ax = sns.barplot(data=monthly_capacity, x='Month', y='Capacity Moved', color='green', ci=None)
+        
+        # Filter to keep only months that exist in the data
+        months_in_data = monthly_capacity['Month'].tolist()
+        ax = sns.barplot(data=monthly_capacity[monthly_capacity['Month'].isin(months_in_data)], x='Month', y='Capacity Moved', color='green', ci=None)
         annotate_bars(ax)
         plt.title('Capacity Moved - Monthly Comparison')
         plt.xlabel('Month')
         plt.ylabel('Total Capacity Moved (Tonnes)')
+        plt.xticks(rotation=45)  # Rotate x-axis labels for better readability
         st.pyplot(plt)
 
     # Function to plot cost trend
@@ -146,11 +150,15 @@ if uploaded_files:
         monthly_cost = data.groupby('Month')[cost_column].sum().reset_index()
 
         plt.figure(figsize=(8, 6))
-        ax = sns.barplot(data=monthly_cost, x='Month', y=cost_column, color='red', ci=None)
+        
+        # Filter to keep only months that exist in the data
+        months_in_data = monthly_cost['Month'].tolist()
+        ax = sns.barplot(data=monthly_cost[monthly_cost['Month'].isin(months_in_data)], x='Month', y=cost_column, color='red', ci=None)
         annotate_bars(ax)
         plt.title(f'Cost - Monthly Comparison ({cost_column.split()[2]})')
         plt.xlabel('Month')
         plt.ylabel(f'Total Cost ({cost_column.split()[2]})')
+        plt.xticks(rotation=45)  # Rotate x-axis labels for better readability
         st.pyplot(plt)
 
     # Function to filter data based on zones
@@ -166,15 +174,15 @@ if uploaded_files:
         elif zone == 'S2':
             return data[data['Lane'].str.contains('CCJ')]
         elif zone == 'E':
-            return data[(data['Cluster'].isin(['IXW', 'CCU'])) & (~data['Lane'].str.contains('NAG')) | (data['Lane'].str.contains('RPR'))]
+            return data[(data['Cluster'].isin(['IXW', 'CCU'])) & (~data['Lane'].str.contains('IXB'))]
         elif zone == 'W1':
-            return data[(data['Cluster'].isin(['BOM', 'NAG', 'PNQ'])) & (~data['Lane'].str.contains('RPR|GOI'))]
+            return data[data['Cluster'].isin(['JAI', 'DEL'])]
         elif zone == 'W2':
-            return data[data['Cluster'] == 'AMD']
+            return data[data['Cluster'].isin(['LKO', 'KAN'])]
         elif zone == 'W3':
-            return data[data['Lane'].str.contains('GOI')]
+            return data[data['Cluster'].isin(['IND', 'GOA'])]
         elif zone == 'C':
-            return data[data['Cluster'] == 'IDR']
+            return data[(data['Cluster'] == 'GAU') & (data['route_type'] == 'NATIONAL')]
         elif zone == 'NE1':
             return data[(data['Cluster'] == 'GAU') & (data['route_type'] == 'NATIONAL')]
         elif zone == 'NE2':
