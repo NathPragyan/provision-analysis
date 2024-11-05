@@ -46,7 +46,7 @@ if uploaded_files:
     data['Capacity Moved'] = data['Capacity Moved'] / 1000  # 1 tonne = 1000 kg
 
     # Sidebar options to choose between Load Trend, Cost Trend, and Zonal Analysis
-    trend_option = st.sidebar.selectbox('Choose Trend Type', ['Load Trend', 'Cost Trend', 'Zonal Analysis'])
+    trend_option = st.sidebar.selectbox('Choose Trend Type', ['Load Trend (vehicle capacity)', 'Cost Trend', 'Zonal Analysis'])
 
     # Initialize the filtered data variable
     filtered_data = data.copy()
