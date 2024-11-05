@@ -19,8 +19,24 @@ if uploaded_files:
     # Ensure the date column is in datetime format
     data['Start_location_scheduled_dispatch_time'] = pd.to_datetime(data['Start_location_scheduled_dispatch_time'])
 
-    # Extract month from the date column
+    # Extract month and month number from the date column
     data['Month'] = data['Start_location_scheduled_dispatch_time'].dt.month_name()
+    data['Month Number'] = data['Start_location_scheduled_dispatch_time'].dt.month
+
+    # Extract unique month numbers and names from the data
+    unique_months = data['Month Number'].unique()
+    unique_months_sorted = sorted(unique_months)  # Sort by month number
+
+    # Create a mapping of month numbers to month names for ordering
+    month_order = {
+        1: 'January', 2: 'February', 3: 'March', 4: 'April', 5: 'May',
+        6: 'June', 7: 'July', 8: 'August', 9: 'September', 10: 'October',
+        11: 'November', 12: 'December'
+    }
+
+    # Filter the months to only those present in the input data, and sort them
+    months_in_data = [month_order[month] for month in unique_months_sorted]
+    data['Month'] = pd.Categorical(data['Month'], categories=months_in_data, ordered=True)
 
     # Convert Section Cost for different views (weekly in lakhs, monthly in crores)
     data['Section Cost (Lakhs)'] = data['Section Cost'] / 10**5  # 1 lakh = 10^5
@@ -203,3 +219,4 @@ if uploaded_files:
                 plot_cost_trend(filtered_data)
 else:
     st.warning('Please upload at least one data file to continue.')
+
