@@ -18,7 +18,6 @@ if uploaded_files:
     data['Start_location_scheduled_dispatch_time'] = pd.to_datetime(
         data['Start_location_scheduled_dispatch_time']
     )
-
     data['Month'] = data['Start_location_scheduled_dispatch_time'].dt.month_name()
     data['Month Number'] = data['Start_location_scheduled_dispatch_time'].dt.month
     data['Day'] = data['Start_location_scheduled_dispatch_time'].dt.day
@@ -52,20 +51,25 @@ if uploaded_files:
     trend_option = st.sidebar.selectbox(
         'Choose Trend Type', ['Load Trend', 'Cost Trend', 'Zonal Analysis']
     )
+
     filtered_data = datewise_data.copy()
 
     st.sidebar.header('Filters')
+
     route_type_filter = st.sidebar.selectbox(
         'Route Type', ['All', 'REGIONAL', 'NATIONAL']
     )
     vendor_type_filter = st.sidebar.selectbox(
         'Vendor Type', ['All', 'VENDOR_SCHEDULED', 'MARKET', 'FEEDER']
     )
+
     cluster_options = ['All'] + sorted(data['Cluster'].dropna().unique().tolist())
     if 'DEL' in cluster_options and 'NOI' in cluster_options:
         cluster_options = [opt for opt in cluster_options if opt not in ['DEL', 'NOI']]
         cluster_options.append('DEL_NOI')
+
     cluster_filter = st.sidebar.selectbox('Cluster', cluster_options)
+
     if cluster_filter != 'All':
         if cluster_filter == 'DEL_NOI':
             lane_options = ['All'] + sorted(
@@ -77,17 +81,21 @@ if uploaded_files:
             )
     else:
         lane_options = ['All'] + sorted(data['Lane'].dropna().unique().tolist())
+
     lane_filter = st.sidebar.selectbox('Lane', lane_options)
 
     if route_type_filter != 'All':
         filtered_data = filtered_data[filtered_data['route_type'] == route_type_filter]
+
     if vendor_type_filter != 'All':
         filtered_data = filtered_data[filtered_data['vendor_type'] == vendor_type_filter]
+
     if cluster_filter != 'All':
         if cluster_filter == 'DEL_NOI':
             filtered_data = filtered_data[filtered_data['Cluster'].isin(['DEL', 'NOI'])]
         else:
             filtered_data = filtered_data[filtered_data['Cluster'] == cluster_filter]
+
     if lane_filter != 'All':
         filtered_data = filtered_data[filtered_data['Lane'] == lane_filter]
 
@@ -109,15 +117,17 @@ if uploaded_files:
             filtered = filtered[filtered['Lane'] == lane_filter]
         if 'route' not in filtered.columns:
             filtered['route'] = ''
-        grouped = filtered.groupby(['Month', 'Lane', 'route'], dropna=False).agg(
+        if 'vendor_type' not in filtered.columns:
+            filtered['vendor_type'] = ''
+        grouped = filtered.groupby(['Month', 'Lane', 'route', 'vendor_type'], dropna=False).agg(
             {
                 'Section Cost': 'sum',
                 'Capacity Moved': 'sum',
+                'duplicasy': 'sum',
                 'Section UTIL': lambda x: list(x),
                 'Section Distance': lambda x: list(x)
             }
         ).reset_index()
-
         # Calculate Util (weighted avg)
         utils = []
         for _, row in grouped.iterrows():
@@ -134,19 +144,21 @@ if uploaded_files:
             denominator = sum(float(d) for d in dists_array)
             util_value = round(numerator / denominator, 4) if denominator else None
             utils.append(util_value)
-
         grouped['Util'] = utils
-
+        # Convert Util to percentage string format
+        grouped['Util'] = grouped['Util'].apply(lambda x: f"{round(x * 100, 2)}%" if pd.notnull(x) else None)
         sheets = {}
         months = grouped['Month'].unique()
         for m in months:
             df = grouped[grouped['Month'] == m].copy()
             df = df.dropna(subset=['Lane', 'route'], how='all')
             df = df[(df[['Lane', 'route', 'Section Cost', 'Capacity Moved']].notnull().any(axis=1))]
-            df_final = df[['Lane', 'route', 'Section Cost', 'Capacity Moved', 'Util']].rename(
+            df_final = df[['Lane', 'route', 'Section Cost', 'Capacity Moved', 'Util', 'duplicasy', 'vendor_type']].rename(
                 columns={
                     'Section Cost': 'Total cost',
-                    'Capacity Moved': 'Total Capacity moved'
+                    'Capacity Moved': 'Total Capacity moved',
+                    'duplicasy': 'Total Trips',
+                    'vendor_type': 'Vendor Type'
                 }
             )
             # Remove rows where both total cost and capacity are 0 or NaN
@@ -183,5 +195,6 @@ if uploaded_files:
             st.warning("No data to export for the selected filters.")
 
     # The plotting and rest of your code would go here as before.
+
 else:
     st.warning('Please upload at least one data file to continue.')
