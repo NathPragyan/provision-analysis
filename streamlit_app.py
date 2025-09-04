@@ -152,7 +152,7 @@ if uploaded_files:
         grouped['Util'] = utils
         grouped['Util'] = grouped['Util'].apply(lambda x: f"{round(x * 100, 2)}%" if pd.notnull(x) else None)
 
-        # Now adjust Total Trips by dividing count of duplicasy by number of '-' in route
+        # Adjust Total Trips by dividing count of duplicasy by number of '-' in route
         def adjusted_trips(row):
             route = row['route']
             trip_count = row['duplicasy']
@@ -160,22 +160,67 @@ if uploaded_files:
                 segments = route.count('-') if route.count('-') > 0 else 1
                 return trip_count / segments
             else:
-                return trip_count  # no adjustment if route empty or not string
+                return trip_count
 
         grouped['Total Trips'] = grouped.apply(adjusted_trips, axis=1)
+
+        # Calculate cpkg column: (Total cost) / (Total Capacity moved) * Util denominator (not multiplied by Util)
+        # So cpkg = Total cost / (Total Capacity moved * Util denominator)
+        # The denominator here is the raw Util decimal (not percentage string)
+
+        def cpkg_calc(row):
+            try:
+                # Extract raw decimal Util from weighted average list calculation (before formatting)
+                # We'll recalculate Util decimal here for accuracy
+                utils_array = filtered[
+                    (filtered['Month'] == row['Month']) &
+                    (filtered['Lane'] == row['Lane']) &
+                    (filtered['route'] == row['route'])
+                ]['Section UTIL']
+                dists_array = filtered[
+                    (filtered['Month'] == row['Month']) &
+                    (filtered['Lane'] == row['Lane']) &
+                    (filtered['route'] == row['route'])
+                ]['Section Distance']
+
+                # Calculate Util decimal again for cpkg denominator
+                utils_array = utils_array.tolist() if hasattr(utils_array, 'tolist') else [utils_array]
+                dists_array = dists_array.tolist() if hasattr(dists_array, 'tolist') else [dists_array]
+
+                if not utils_array or not dists_array:
+                    return None
+
+                utils_array = [u if pd.notnull(u) else 0 for u in utils_array]
+                dists_array = [d if pd.notnull(d) else 0 for d in dists_array]
+
+                numerator = sum(float(u) * float(d) for u, d in zip(utils_array, dists_array))
+                denominator = sum(float(d) for d in dists_array)
+                util_decimal = numerator / denominator if denominator else 0
+
+                if util_decimal == 0:
+                    return None
+
+                if row['Total Capacity moved'] == 0 or pd.isna(row['Total Capacity moved']):
+                    return None
+
+                return row['Total cost'] / (row['Total Capacity moved'] * util_decimal)
+            except Exception:
+                return None
+
+        # Rename columns for clarity
+        grouped = grouped.rename(
+            columns={'Section Cost': 'Total cost', 'Capacity Moved': 'Total Capacity moved'}
+        )
+
+        grouped['cpkg'] = grouped.apply(cpkg_calc, axis=1)
 
         sheets = {}
         months = grouped['Month'].unique()
         for m in months:
             df = grouped[grouped['Month'] == m].copy()
             df = df.dropna(subset=['Lane', 'route'], how='all')
-            df = df[(df[['Lane', 'route', 'Section Cost', 'Capacity Moved']].notnull().any(axis=1))]
-            df_final = df[['Lane', 'route', 'Section Cost', 'Capacity Moved', 'Util', 'Total Trips']].rename(
-                columns={
-                    'Section Cost': 'Total cost',
-                    'Capacity Moved': 'Total Capacity moved',
-                }
-            )
+            df = df[(df[['Lane', 'route', 'Total cost', 'Total Capacity moved']].notnull().any(axis=1))]
+            df_final = df[['Lane', 'route', 'Total cost', 'Total Capacity moved', 'Util', 'Total Trips', 'cpkg']]
             df_final = df_final[~(
                 (df_final['Total cost'].fillna(0) == 0) &
                 (df_final['Total Capacity moved'].fillna(0) == 0) &
