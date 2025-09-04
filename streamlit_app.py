@@ -35,10 +35,8 @@ if uploaded_files:
         data['Month'], categories=months_in_data, ordered=True
     )
 
-    data['Section Cost'] = data['Section Cost']  # cost in ones
-    # Capacity Moved stays in kg (no conversion)
+    data['Section Cost'] = data['Section Cost']  # cost in ones, no conversion
 
-    # ------------ Datewise Filter Section ------------
     st.sidebar.header('Datewise Filter')
     min_day = int(data['Day'].min())
     max_day = int(data['Day'].max())
@@ -46,9 +44,7 @@ if uploaded_files:
         'Enter Day of Month for Comparison', min_value=min_day, max_value=max_day, value=min_day, step=1
     )
     datewise_data = data[data['Day'] == datewise_day]
-    # -------------------------------------------------
 
-    # ------------ Trend Type Selection and Filters ------------
     trend_option = st.sidebar.selectbox(
         'Choose Trend Type', ['Load Trend', 'Cost Trend', 'Zonal Analysis']
     )
@@ -58,7 +54,6 @@ if uploaded_files:
     route_type_filter = st.sidebar.selectbox(
         'Route Type', ['All', 'REGIONAL', 'NATIONAL']
     )
-    # Vendor Type filter with combined 'Scheduled & Feeder'
     vendor_type_options = ['All', 'MARKET', 'Scheduled & Feeder']
     vendor_type_filter = st.sidebar.selectbox('Vendor Type', vendor_type_options)
 
@@ -81,11 +76,9 @@ if uploaded_files:
         lane_options = ['All'] + sorted(data['Lane'].dropna().unique().tolist())
     lane_filter = st.sidebar.selectbox('Lane', lane_options)
 
-    # Apply filters
     if route_type_filter != 'All':
         filtered_data = filtered_data[filtered_data['route_type'] == route_type_filter]
 
-    # Vendor Type filter logic for combined option
     if vendor_type_filter != 'All':
         if vendor_type_filter == 'Scheduled & Feeder':
             filtered_data = filtered_data[
@@ -103,11 +96,11 @@ if uploaded_files:
     if lane_filter != 'All':
         filtered_data = filtered_data[filtered_data['Lane'] == lane_filter]
 
-    # ------------ Excel Export Functionality ------------
     def prepare_filtered_summaries(
         data, selected_day, route_type, vendor_type, cluster_filter, lane_filter
     ):
         filtered = data[data['Day'] == selected_day].copy()
+
         if route_type != 'All':
             filtered = filtered[filtered['route_type'] == route_type]
 
@@ -165,20 +158,8 @@ if uploaded_files:
             df = grouped[grouped['Month'] == m].copy()
             df = df.dropna(subset=['Lane', 'route'], how='all')
 
-            def val_or_not_operated(x):
-                if pd.isnull(x) or (isinstance(x, (int, float)) and x == 0):
-                    return 'Not Operated'
-                return x
+            # No 'Not Operated' substitution here, keep data as is
 
-            df['Section Cost'] = df['Section Cost'].apply(val_or_not_operated)
-            df['Capacity Moved'] = df['Capacity Moved'].apply(val_or_not_operated)
-            df['Duplicasy'] = df['Duplicasy'].apply(val_or_not_operated)
-            def format_util(x):
-                if x is None or pd.isna(x):
-                    return 'Not Operated'
-                else:
-                    return f"{x}%"
-            df['Util'] = df['Util'].apply(format_util)
             df.rename(columns={'Duplicasy': 'Total Trips'}, inplace=True)
 
             df_final = df[['Lane', 'route', 'Section Cost', 'Capacity Moved', 'Util', 'Total Trips']].rename(
@@ -215,7 +196,7 @@ if uploaded_files:
         else:
             st.warning("No data to export for the selected filters.")
 
-    # --- Your existing plot and zonal analysis code here ---
+    # Your plotting or zonal analysis code here...
 
 else:
     st.warning('Please upload at least one data file to continue.')
