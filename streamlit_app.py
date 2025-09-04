@@ -2,11 +2,12 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+from io import BytesIO
 
-# Set Streamlit page title
+# -- Title --
 st.title('Provision Analysis: Load Trend and Cost Trend')
 
-# Sidebar for uploading files
+# -- Sidebar for file upload --
 st.sidebar.header('Upload your Data Files')
 uploaded_files = st.sidebar.file_uploader(
     'Choose Provision files', accept_multiple_files=True, type=['xlsx']
@@ -22,12 +23,12 @@ if uploaded_files:
         data['Start_location_scheduled_dispatch_time']
     )
 
-    # Extract month info
+    # Extract month info and day
     data['Month'] = data['Start_location_scheduled_dispatch_time'].dt.month_name()
     data['Month Number'] = data['Start_location_scheduled_dispatch_time'].dt.month
     data['Day'] = data['Start_location_scheduled_dispatch_time'].dt.day
 
-    # Map month numbers to month names for ordering
+    # Month ordering
     unique_months = data['Month Number'].unique()
     unique_months_sorted = sorted(unique_months)
     month_order = {
@@ -40,13 +41,12 @@ if uploaded_files:
         data['Month'], categories=months_in_data, ordered=True
     )
 
-    # Section Cost conversions
-    data['Section Cost (Lakhs)'] = data['Section Cost'] / 10**5  # 1 lakh = 1,00,000
-    data['Section Cost (Crores)'] = data['Section Cost'] / 10**7  # 1 crore = 1,00,00,000
-    # Convert Capacity Moved to tonnes (assuming input is in kg)
+    # Section Cost in ones (no conversion)
+    # Capacity Moved in Tonnes (assuming input is in kg)
+    data['Section Cost'] = data['Section Cost']  # already in 'ones'
     data['Capacity Moved'] = data['Capacity Moved'] / 1000
 
-    # --- DATEWISE FILTER SECTION ---
+    # ------------ Datewise Filter Section ------------
     st.sidebar.header('Datewise Filter')
     min_day = int(data['Day'].min())
     max_day = int(data['Day'].max())
@@ -54,58 +54,124 @@ if uploaded_files:
         'Enter Day of Month for Comparison', min_value=min_day, max_value=max_day, value=min_day, step=1
     )
     datewise_data = data[data['Day'] == datewise_day]
-    # --------------------------------
+    # -------------------------------------------------
 
-    # Sidebar: main trend type selection
+    # ------------ Trend Type Selection and Filters ------------
     trend_option = st.sidebar.selectbox(
         'Choose Trend Type', ['Load Trend', 'Cost Trend', 'Zonal Analysis']
     )
     # Start with datewise filter
     filtered_data = datewise_data.copy()
 
-    # --- General Filters for Load/Cost Trend ---
-    if trend_option in ['Load Trend', 'Cost Trend']:
-        st.sidebar.header('Filters')
-        route_type_filter = st.sidebar.selectbox(
-            'Route Type', ['All', 'REGIONAL', 'NATIONAL']
-        )
-        vendor_type_filter = st.sidebar.selectbox(
-            'Vendor Type', ['All', 'VENDOR_SCHEDULED', 'MARKET', 'FEEDER']
-        )
-        # Cluster filter (with "DEL_NOI" logic)
-        cluster_options = ['All'] + sorted(data['Cluster'].dropna().unique().tolist())
-        if 'DEL' in cluster_options and 'NOI' in cluster_options:
-            cluster_options = [opt for opt in cluster_options if opt not in ['DEL', 'NOI']]
-            cluster_options.append('DEL_NOI')
-        cluster_filter = st.sidebar.selectbox('Cluster', cluster_options)
-        # Lane filter
-        if cluster_filter != 'All':
-            if cluster_filter == 'DEL_NOI':
-                lane_options = ['All'] + sorted(
-                    data[data['Cluster'].isin(['DEL', 'NOI'])]['Lane'].dropna().unique().tolist()
-                )
-            else:
-                lane_options = ['All'] + sorted(
-                    data[data['Cluster'] == cluster_filter]['Lane'].dropna().unique().tolist()
-                )
+    st.sidebar.header('Filters')
+    route_type_filter = st.sidebar.selectbox(
+        'Route Type', ['All', 'REGIONAL', 'NATIONAL']
+    )
+    vendor_type_filter = st.sidebar.selectbox(
+        'Vendor Type', ['All', 'VENDOR_SCHEDULED', 'MARKET', 'FEEDER']
+    )
+    # Cluster filter (with "DEL_NOI" logic)
+    cluster_options = ['All'] + sorted(data['Cluster'].dropna().unique().tolist())
+    if 'DEL' in cluster_options and 'NOI' in cluster_options:
+        cluster_options = [opt for opt in cluster_options if opt not in ['DEL', 'NOI']]
+        cluster_options.append('DEL_NOI')
+    cluster_filter = st.sidebar.selectbox('Cluster', cluster_options)
+    # Lane filter
+    if cluster_filter != 'All':
+        if cluster_filter == 'DEL_NOI':
+            lane_options = ['All'] + sorted(
+                data[data['Cluster'].isin(['DEL', 'NOI'])]['Lane'].dropna().unique().tolist()
+            )
         else:
-            lane_options = ['All'] + sorted(data['Lane'].dropna().unique().tolist())
-        lane_filter = st.sidebar.selectbox('Lane', lane_options)
+            lane_options = ['All'] + sorted(
+                data[data['Cluster'] == cluster_filter]['Lane'].dropna().unique().tolist()
+            )
+    else:
+        lane_options = ['All'] + sorted(data['Lane'].dropna().unique().tolist())
+    lane_filter = st.sidebar.selectbox('Lane', lane_options)
 
-        # Apply filters
-        if route_type_filter != 'All':
-            filtered_data = filtered_data[filtered_data['route_type'] == route_type_filter]
-        if vendor_type_filter != 'All':
-            filtered_data = filtered_data[filtered_data['vendor_type'] == vendor_type_filter]
+    # Apply filters
+    if route_type_filter != 'All':
+        filtered_data = filtered_data[filtered_data['route_type'] == route_type_filter]
+    if vendor_type_filter != 'All':
+        filtered_data = filtered_data[filtered_data['vendor_type'] == vendor_type_filter]
+    if cluster_filter != 'All':
+        if cluster_filter == 'DEL_NOI':
+            filtered_data = filtered_data[filtered_data['Cluster'].isin(['DEL', 'NOI'])]
+        else:
+            filtered_data = filtered_data[filtered_data['Cluster'] == cluster_filter]
+    if lane_filter != 'All':
+        filtered_data = filtered_data[filtered_data['Lane'] == lane_filter]
+
+    # ------------ Excel Export Functionality ------------
+    def prepare_filtered_summaries(data, selected_day, route_type, vendor_type,
+                                   cluster_filter, lane_filter):
+        filtered = data[data['Day'] == selected_day].copy()
+        if route_type != 'All':
+            filtered = filtered[filtered['route_type'] == route_type]
+        if vendor_type != 'All':
+            filtered = filtered[filtered['vendor_type'] == vendor_type]
         if cluster_filter != 'All':
             if cluster_filter == 'DEL_NOI':
-                filtered_data = filtered_data[filtered_data['Cluster'].isin(['DEL', 'NOI'])]
+                filtered = filtered[filtered['Cluster'].isin(['DEL', 'NOI'])]
             else:
-                filtered_data = filtered_data[filtered_data['Cluster'] == cluster_filter]
+                filtered = filtered[filtered['Cluster'] == cluster_filter]
         if lane_filter != 'All':
-            filtered_data = filtered_data[filtered_data['Lane'] == lane_filter]
+            filtered = filtered[filtered['Lane'] == lane_filter]
+        # "route" column fallback in case it does not exist
+        if 'route' not in filtered.columns:
+            filtered['route'] = ''
+        grp = filtered.groupby(['Month', 'Lane', 'route'], dropna=False).agg({
+            'Section Cost': 'sum',
+            'Capacity Moved': 'sum'
+        }).reset_index()
 
-    # --- Annotate Bars Function ---
+        # Remove lanes with all values null across exported sheets
+        # Keep only the required columns, naming as per your requirements
+        sheets = {}
+        months = grp['Month'].unique()
+        for m in months:
+            df = grp[grp['Month'] == m].copy()
+            df = df.dropna(subset=['Lane', 'route'], how='all')
+            df = df[(df[['Lane', 'route', 'Section Cost', 'Capacity Moved']].notnull().any(axis=1))]
+            df_final = df[['Lane', 'route', 'Section Cost', 'Capacity Moved']].rename(
+                columns={
+                    'Section Cost': 'Total cost',
+                    'Capacity Moved': 'Total Capacity moved'
+                }
+            )
+            # Remove rows where both total cost and capacity are 0 or NaN
+            df_final = df_final[~((df_final['Total cost'].fillna(0) == 0) &
+                                  (df_final['Total Capacity moved'].fillna(0) == 0))]
+            sheets[str(m)] = df_final.reset_index(drop=True)
+        return sheets
+
+    def export_filtered_excel(df_dict):
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            for sheet, df in df_dict.items():
+                df.to_excel(writer, sheet_name=str(sheet), index=False)
+        output.seek(0)
+        return output
+
+    if st.button('Download Comparison Excel'):
+        sheets = prepare_filtered_summaries(
+            data, datewise_day, route_type_filter, vendor_type_filter, cluster_filter, lane_filter
+        )
+        # Remove empty sheets
+        sheets = {k: v for k, v in sheets.items() if not v.empty}
+        if sheets:
+            excel_file = export_filtered_excel(sheets)
+            st.download_button(
+                label='Download Comparison Excel File',
+                data=excel_file,
+                file_name='comparison_report.xlsx',
+                mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+        else:
+            st.warning("No data to export for the selected filters.")
+
+    # ------------ Annotate Bars Function ------------
     def annotate_bars(ax):
         for p in ax.patches:
             value = p.get_height()
@@ -117,10 +183,9 @@ if uploaded_files:
                         textcoords='offset points',
                         fontsize=7)
 
-    # --- Plot Load Trend ---
+    # ------------ Plots and Zonal Analysis ------------
     def plot_load_trend(data):
         st.subheader('Load Trend Analysis (in Tonnes)')
-        # Weekly comparison
         if 'Week No' in data.columns and not data.empty:
             weekly_capacity = data.groupby(['Week No', 'Month'])['Capacity Moved'].sum().reset_index()
             plt.figure(figsize=(10, 6))
@@ -131,7 +196,6 @@ if uploaded_files:
             plt.ylabel('Capacity Moved (Tonnes)')
             plt.legend(title='Month')
             st.pyplot(plt)
-        # Monthly comparison
         monthly_capacity = data.groupby('Month')['Capacity Moved'].sum().reset_index()
         plt.figure(figsize=(8, 6))
         ax = sns.barplot(data=monthly_capacity, x='Month', y='Capacity Moved', color='green', ci=None)
@@ -141,31 +205,27 @@ if uploaded_files:
         plt.ylabel('Total Capacity Moved (Tonnes)')
         st.pyplot(plt)
 
-    # --- Plot Cost Trend ---
     def plot_cost_trend(data):
         st.subheader('Cost Trend Analysis')
-        # Weekly comparison
         if 'Week No' in data.columns and not data.empty:
-            weekly_cost = data.groupby(['Week No', 'Month'])['Section Cost (Lakhs)'].sum().reset_index()
+            weekly_cost = data.groupby(['Week No', 'Month'])['Section Cost'].sum().reset_index()
             plt.figure(figsize=(10, 6))
-            ax = sns.barplot(data=weekly_cost, x='Week No', y='Section Cost (Lakhs)', hue='Month', ci=None)
+            ax = sns.barplot(data=weekly_cost, x='Week No', y='Section Cost', hue='Month', ci=None)
             annotate_bars(ax)
-            plt.title('Cost - Weekly Comparison (in Lakhs)')
+            plt.title('Cost - Weekly Comparison (in Ones)')
             plt.xlabel('Week Number')
-            plt.ylabel('Cost (Lakhs)')
+            plt.ylabel('Cost (Ones)')
             plt.legend(title='Month')
             st.pyplot(plt)
-        # Monthly comparison
-        monthly_cost = data.groupby('Month')['Section Cost (Lakhs)'].sum().reset_index()
+        monthly_cost = data.groupby('Month')['Section Cost'].sum().reset_index()
         plt.figure(figsize=(8, 6))
-        ax = sns.barplot(data=monthly_cost, x='Month', y='Section Cost (Lakhs)', color='red', ci=None)
+        ax = sns.barplot(data=monthly_cost, x='Month', y='Section Cost', color='red', ci=None)
         annotate_bars(ax)
-        plt.title('Cost - Monthly Comparison (Lakhs)')
+        plt.title('Cost - Monthly Comparison (Ones)')
         plt.xlabel('Month')
-        plt.ylabel('Total Cost (Lakhs)')
+        plt.ylabel('Total Cost (Ones)')
         st.pyplot(plt)
 
-    # --- Zonal Data Filtering ---
     def filter_zonal_data(data, zone):
         if zone == 'N1':
             return data[data['Lane'].isin(data[data['Cluster'].isin(['DEL', 'JAI', 'LKO'])]['Lane'])]
@@ -194,19 +254,16 @@ if uploaded_files:
         else:
             return data
 
-    # --- Zonal Analysis Logic ---
     if trend_option == 'Zonal Analysis':
         st.sidebar.header('Zonal Filters')
         zone_options = ['N1', 'N2', 'N3', 'S1', 'S2', 'E', 'W1', 'W2', 'W3', 'C', 'NE1', 'NE2']
         selected_zone = st.sidebar.selectbox('Select Zone', zone_options)
-        zonal_data = filter_zonal_data(datewise_data, selected_zone)
+        zonal_data = filter_zonal_data(filtered_data, selected_zone)
         if zonal_data.empty:
             st.warning(f"No data available for the selected zone: {selected_zone}")
         else:
             plot_load_trend(zonal_data)
             plot_cost_trend(zonal_data)
-
-    # --- Load or Cost Trend Analysis ---
     elif trend_option in ['Load Trend', 'Cost Trend']:
         if filtered_data.empty:
             st.warning("No data available for the selected filters.")
@@ -215,6 +272,5 @@ if uploaded_files:
                 plot_load_trend(filtered_data)
             elif trend_option == 'Cost Trend':
                 plot_cost_trend(filtered_data)
-
 else:
     st.warning('Please upload at least one data file to continue.')
