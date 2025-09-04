@@ -115,7 +115,7 @@ if uploaded_files:
 
         if 'route' not in filtered.columns:
             filtered['route'] = ''
-        # Ensure columns exist to avoid KeyError
+        # Ensure columns exist to avoid errors
         if 'duplicasy' not in filtered.columns:
             filtered['duplicasy'] = 0
         if 'Section UTIL' not in filtered.columns:
@@ -127,7 +127,7 @@ if uploaded_files:
             {
                 'Section Cost': 'sum',
                 'Capacity Moved': 'sum',
-                'duplicasy': 'count',  # count instead of sum for Total Trips
+                'duplicasy': 'count',  # count for trips
                 'Section UTIL': lambda x: list(x),
                 'Section Distance': lambda x: list(x)
             }
@@ -138,7 +138,6 @@ if uploaded_files:
         for _, row in grouped.iterrows():
             utils_array = row['Section UTIL']
             dists_array = row['Section Distance']
-            # Convert to arrays if not already
             if not isinstance(utils_array, list):
                 utils_array = [utils_array]
             if not isinstance(dists_array, list):
@@ -151,8 +150,19 @@ if uploaded_files:
             utils.append(util_value)
 
         grouped['Util'] = utils
-        # Convert Util to percentage string format
         grouped['Util'] = grouped['Util'].apply(lambda x: f"{round(x * 100, 2)}%" if pd.notnull(x) else None)
+
+        # Now adjust Total Trips by dividing count of duplicasy by number of '-' in route
+        def adjusted_trips(row):
+            route = row['route']
+            trip_count = row['duplicasy']
+            if isinstance(route, str) and route:
+                segments = route.count('-') if route.count('-') > 0 else 1
+                return trip_count / segments
+            else:
+                return trip_count  # no adjustment if route empty or not string
+
+        grouped['Total Trips'] = grouped.apply(adjusted_trips, axis=1)
 
         sheets = {}
         months = grouped['Month'].unique()
@@ -160,14 +170,12 @@ if uploaded_files:
             df = grouped[grouped['Month'] == m].copy()
             df = df.dropna(subset=['Lane', 'route'], how='all')
             df = df[(df[['Lane', 'route', 'Section Cost', 'Capacity Moved']].notnull().any(axis=1))]
-            df_final = df[['Lane', 'route', 'Section Cost', 'Capacity Moved', 'Util', 'duplicasy']].rename(
+            df_final = df[['Lane', 'route', 'Section Cost', 'Capacity Moved', 'Util', 'Total Trips']].rename(
                 columns={
                     'Section Cost': 'Total cost',
                     'Capacity Moved': 'Total Capacity moved',
-                    'duplicasy': 'Total Trips'
                 }
             )
-            # Remove rows where both total cost and capacity are 0 or NaN
             df_final = df_final[~(
                 (df_final['Total cost'].fillna(0) == 0) &
                 (df_final['Total Capacity moved'].fillna(0) == 0) &
@@ -200,8 +208,6 @@ if uploaded_files:
             )
         else:
             st.warning("No data to export for the selected filters.")
-
-    # The plotting and rest of your code would go here as before.
 
 else:
     st.warning('Please upload at least one data file to continue.')
