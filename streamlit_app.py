@@ -115,7 +115,6 @@ if uploaded_files:
 
         if 'route' not in filtered.columns:
             filtered['route'] = ''
-        # Ensure columns exist to avoid errors
         if 'duplicasy' not in filtered.columns:
             filtered['duplicasy'] = 0
         if 'Section UTIL' not in filtered.columns:
@@ -127,13 +126,12 @@ if uploaded_files:
             {
                 'Section Cost': 'sum',
                 'Capacity Moved': 'sum',
-                'duplicasy': 'count',  # count for trips
+                'duplicasy': 'count',
                 'Section UTIL': lambda x: list(x),
                 'Section Distance': lambda x: list(x)
             }
         ).reset_index()
 
-        # Calculate Util (weighted avg)
         utils = []
         for _, row in grouped.iterrows():
             utils_array = row['Section UTIL']
@@ -152,7 +150,6 @@ if uploaded_files:
         grouped['Util'] = utils
         grouped['Util'] = grouped['Util'].apply(lambda x: f"{round(x * 100, 2)}%" if pd.notnull(x) else None)
 
-        # Adjust Total Trips by dividing count of duplicasy by number of '-' in route
         def adjusted_trips(row):
             route = row['route']
             trip_count = row['duplicasy']
@@ -164,14 +161,8 @@ if uploaded_files:
 
         grouped['Total Trips'] = grouped.apply(adjusted_trips, axis=1)
 
-        # Calculate cpkg column: (Total cost) / (Total Capacity moved) * Util denominator (not multiplied by Util)
-        # So cpkg = Total cost / (Total Capacity moved * Util denominator)
-        # The denominator here is the raw Util decimal (not percentage string)
-
         def cpkg_calc(row):
             try:
-                # Extract raw decimal Util from weighted average list calculation (before formatting)
-                # We'll recalculate Util decimal here for accuracy
                 utils_array = filtered[
                     (filtered['Month'] == row['Month']) &
                     (filtered['Lane'] == row['Lane']) &
@@ -183,7 +174,6 @@ if uploaded_files:
                     (filtered['route'] == row['route'])
                 ]['Section Distance']
 
-                # Calculate Util decimal again for cpkg denominator
                 utils_array = utils_array.tolist() if hasattr(utils_array, 'tolist') else [utils_array]
                 dists_array = dists_array.tolist() if hasattr(dists_array, 'tolist') else [dists_array]
 
@@ -200,19 +190,21 @@ if uploaded_files:
                 if util_decimal == 0:
                     return None
 
-                if row['Total Capacity moved'] == 0 or pd.isna(row['Total Capacity moved']):
+                if row['Capacity Moved'] == 0 or pd.isna(row['Capacity Moved']):
                     return None
 
-                return row['Total cost'] / (row['Total Capacity moved'] * util_decimal)
+                return row['Section Cost'] / (row['Capacity Moved'] * util_decimal)
             except Exception:
                 return None
 
-        # Rename columns for clarity
-        grouped = grouped.rename(
-            columns={'Section Cost': 'Total cost', 'Capacity Moved': 'Total Capacity moved'}
-        )
-
         grouped['cpkg'] = grouped.apply(cpkg_calc, axis=1)
+
+        grouped = grouped.rename(
+            columns={
+                'Section Cost': 'Total cost',
+                'Capacity Moved': 'Total Capacity moved'
+            }
+        )
 
         sheets = {}
         months = grouped['Month'].unique()
@@ -220,7 +212,9 @@ if uploaded_files:
             df = grouped[grouped['Month'] == m].copy()
             df = df.dropna(subset=['Lane', 'route'], how='all')
             df = df[(df[['Lane', 'route', 'Total cost', 'Total Capacity moved']].notnull().any(axis=1))]
-            df_final = df[['Lane', 'route', 'Total cost', 'Total Capacity moved', 'Util', 'Total Trips', 'cpkg']]
+            df_final = df[[
+                'Lane', 'route', 'Total cost', 'Total Capacity moved', 'Util', 'Total Trips', 'cpkg'
+            ]]
             df_final = df_final[~(
                 (df_final['Total cost'].fillna(0) == 0) &
                 (df_final['Total Capacity moved'].fillna(0) == 0) &
@@ -228,13 +222,47 @@ if uploaded_files:
             )]
             sheets[str(m)] = df_final.reset_index(drop=True)
 
+        # Create Comparison sheet with common routes across all months
+        if len(months) > 1:
+            # Pick first month's df
+            common_routes = sheets[months[0]][['route']].copy()
+            # Intersect routes from other months
+            for month in months[1:]:
+                common_routes = pd.merge(
+                    common_routes,
+                    sheets[month][['route']],
+                    on='route',
+                    how='inner'
+                )
+            # Now prepare the comparison DataFrame
+            comp_dfs = []
+            for month in months:
+                df = sheets[month][sheets[month]['route'].isin(common_routes['route'])].copy()
+                # Prefix columns with month to distinguish
+                df = df.rename(
+                    columns={
+                        'Total cost': f'Total cost ({month})',
+                        'Total Capacity moved': f'Total Capacity moved ({month})',
+                        'Util': f'Util ({month})',
+                        'Total Trips': f'Total Trips ({month})',
+                        'cpkg': f'cpkg ({month})'
+                    }
+                )
+                # Keep route for merge
+                comp_dfs.append(df.set_index('route'))
+
+            # Merge all on route
+            comparison_df = pd.concat(comp_dfs, axis=1, join='inner').reset_index()
+
+            sheets['Comparison'] = comparison_df
+
         return sheets
 
     def export_filtered_excel(df_dict):
         output = BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-            for sheet, df in df_dict.items():
-                df.to_excel(writer, sheet_name=str(sheet), index=False)
+            for sheet_name, df in df_dict.items():
+                df.to_excel(writer, sheet_name=sheet_name, index=False)
         output.seek(0)
         return output
 
