@@ -86,16 +86,13 @@ if uploaded_files:
 
     if route_type_filter != 'All':
         filtered_data = filtered_data[filtered_data['route_type'] == route_type_filter]
-
     if vendor_type_filter != 'All':
         filtered_data = filtered_data[filtered_data['vendor_type'] == vendor_type_filter]
-
     if cluster_filter != 'All':
         if cluster_filter == 'DEL_NOI':
             filtered_data = filtered_data[filtered_data['Cluster'].isin(['DEL', 'NOI'])]
         else:
             filtered_data = filtered_data[filtered_data['Cluster'] == cluster_filter]
-
     if lane_filter != 'All':
         filtered_data = filtered_data[filtered_data['Lane'] == lane_filter]
 
@@ -115,11 +112,18 @@ if uploaded_files:
                 filtered = filtered[filtered['Cluster'] == cluster_filter]
         if lane_filter != 'All':
             filtered = filtered[filtered['Lane'] == lane_filter]
+
         if 'route' not in filtered.columns:
             filtered['route'] = ''
-        if 'vendor_type' not in filtered.columns:
-            filtered['vendor_type'] = ''
-        grouped = filtered.groupby(['Month', 'Lane', 'route', 'vendor_type'], dropna=False).agg(
+        # Ensure columns exist to avoid KeyError
+        if 'duplicasy' not in filtered.columns:
+            filtered['duplicasy'] = 0
+        if 'Section UTIL' not in filtered.columns:
+            filtered['Section UTIL'] = 0
+        if 'Section Distance' not in filtered.columns:
+            filtered['Section Distance'] = 0
+
+        grouped = filtered.groupby(['Month', 'Lane', 'route'], dropna=False).agg(
             {
                 'Section Cost': 'sum',
                 'Capacity Moved': 'sum',
@@ -128,6 +132,7 @@ if uploaded_files:
                 'Section Distance': lambda x: list(x)
             }
         ).reset_index()
+
         # Calculate Util (weighted avg)
         utils = []
         for _, row in grouped.iterrows():
@@ -144,21 +149,22 @@ if uploaded_files:
             denominator = sum(float(d) for d in dists_array)
             util_value = round(numerator / denominator, 4) if denominator else None
             utils.append(util_value)
+
         grouped['Util'] = utils
         # Convert Util to percentage string format
         grouped['Util'] = grouped['Util'].apply(lambda x: f"{round(x * 100, 2)}%" if pd.notnull(x) else None)
+
         sheets = {}
         months = grouped['Month'].unique()
         for m in months:
             df = grouped[grouped['Month'] == m].copy()
             df = df.dropna(subset=['Lane', 'route'], how='all')
             df = df[(df[['Lane', 'route', 'Section Cost', 'Capacity Moved']].notnull().any(axis=1))]
-            df_final = df[['Lane', 'route', 'Section Cost', 'Capacity Moved', 'Util', 'duplicasy', 'vendor_type']].rename(
+            df_final = df[['Lane', 'route', 'Section Cost', 'Capacity Moved', 'Util', 'duplicasy']].rename(
                 columns={
                     'Section Cost': 'Total cost',
                     'Capacity Moved': 'Total Capacity moved',
-                    'duplicasy': 'Total Trips',
-                    'vendor_type': 'Vendor Type'
+                    'duplicasy': 'Total Trips'
                 }
             )
             # Remove rows where both total cost and capacity are 0 or NaN
@@ -168,6 +174,7 @@ if uploaded_files:
                 (df_final['Util'].isnull())
             )]
             sheets[str(m)] = df_final.reset_index(drop=True)
+
         return sheets
 
     def export_filtered_excel(df_dict):
