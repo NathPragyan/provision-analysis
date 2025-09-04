@@ -127,7 +127,7 @@ if uploaded_files:
             {
                 'Section Cost': 'sum',
                 'Capacity Moved': 'sum',
-                'duplicasy': 'sum',
+                'duplicasy': 'count',  # count instead of sum for Total Trips
                 'Section UTIL': lambda x: list(x),
                 'Section Distance': lambda x: list(x)
             }
