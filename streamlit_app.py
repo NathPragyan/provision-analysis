@@ -158,8 +158,6 @@ if uploaded_files:
             df = grouped[grouped['Month'] == m].copy()
             df = df.dropna(subset=['Lane', 'route'], how='all')
 
-            # No 'Not Operated' substitution here, keep data as is
-
             df.rename(columns={'Duplicasy': 'Total Trips'}, inplace=True)
 
             df_final = df[['Lane', 'route', 'Section Cost', 'Capacity Moved', 'Util', 'Total Trips']].rename(
@@ -196,7 +194,7 @@ if uploaded_files:
         else:
             st.warning("No data to export for the selected filters.")
 
-    # Your plotting or zonal analysis code here...
+    # Your plotting and zonal analysis code here...
 
 else:
     st.warning('Please upload at least one data file to continue.')
