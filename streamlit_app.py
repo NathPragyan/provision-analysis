@@ -5,12 +5,10 @@ import seaborn as sns
 from io import BytesIO
 
 st.title('Provision Analysis: Load Trend and Cost Trend')
-
 st.sidebar.header('Upload your Data Files')
 uploaded_files = st.sidebar.file_uploader(
     'Choose Provision files', accept_multiple_files=True, type=['xlsx']
 )
-
 if uploaded_files:
     dataframes = [pd.read_excel(file, sheet_name='RAW Data') for file in uploaded_files]
     data = pd.concat(dataframes, ignore_index=True)
@@ -31,7 +29,6 @@ if uploaded_files:
     data['Month'] = pd.Categorical(
         data['Month'], categories=months_in_data, ordered=True
     )
-    # No kg/tonne conversion
     data['Section Cost'] = data['Section Cost']  # already in ones
 
     # ------------ Datewise Filter Section ------------
@@ -48,9 +45,7 @@ if uploaded_files:
     trend_option = st.sidebar.selectbox(
         'Choose Trend Type', ['Load Trend', 'Cost Trend', 'Zonal Analysis']
     )
-
     filtered_data = datewise_data.copy()
-
     st.sidebar.header('Filters')
     route_type_filter = st.sidebar.selectbox(
         'Route Type', ['All', 'REGIONAL', 'NATIONAL']
@@ -111,10 +106,8 @@ if uploaded_files:
             filtered['Section UTIL'] = 0
         if 'Section Distance' not in filtered.columns:
             filtered['Section Distance'] = 0
-        # --- START ADDED/EDITED BLOCK FOR 'Vol Util' ---
         if 'Volume Util' not in filtered.columns:
             filtered['Volume Util'] = 0
-        # --- END ADDED BLOCK ---
 
         grouped = filtered.groupby(['Month', 'Lane', 'route'], dropna=False).agg(
             {
@@ -122,38 +115,44 @@ if uploaded_files:
                 'Capacity Moved': 'sum',
                 'duplicasy': 'count',
                 'Section UTIL': lambda x: list(x),
-                'Volume Util': lambda x: list(x),    # ADDED
+                'Volume Util': lambda x: list(x),
                 'Section Distance': lambda x: list(x)
             }
         ).reset_index()
 
         utils = []
-        vol_utils = []    # ADDED
+        vol_utils = []
         for _, row in grouped.iterrows():
             utils_array = row['Section UTIL']
-            vol_utils_array = row['Volume Util']    # ADDED
+            vol_utils_array = row['Volume Util']
             dists_array = row['Section Distance']
             if not isinstance(utils_array, list):
                 utils_array = [utils_array]
-            if not isinstance(vol_utils_array, list):    # ADDED
-                vol_utils_array = [vol_utils_array]      # ADDED
+            if not isinstance(vol_utils_array, list):
+                vol_utils_array = [vol_utils_array]
             if not isinstance(dists_array, list):
                 dists_array = [dists_array]
             utils_array = [u if pd.notnull(u) else 0 for u in utils_array]
-            vol_utils_array = [vu if pd.notnull(vu) else 0 for vu in vol_utils_array]   # ADDED
+            vol_utils_array = [vu if pd.notnull(vu) else 0 for vu in vol_utils_array]
             dists_array = [d if pd.notnull(d) else 0 for d in dists_array]
             numerator = sum(float(u) * float(d) for u, d in zip(utils_array, dists_array))
             denominator = sum(float(d) for d in dists_array)
             util_value = round(numerator / denominator, 4) if denominator else None
-            # Compute 'Vol Util':
-            vol_numerator = sum(float(vu) * float(d) for vu, d in zip(vol_utils_array, dists_array))    # ADDED
-            vol_util_value = round(vol_numerator / denominator, 4) if denominator else None             # ADDED
+            vol_numerator = sum(float(vu) * float(d) for vu, d in zip(vol_utils_array, dists_array))
+            vol_util_value = round(vol_numerator / denominator, 4) if denominator else None
             utils.append(util_value)
-            vol_utils.append(vol_util_value)    # ADDED
+            vol_utils.append(vol_util_value)
         grouped['Util'] = utils
-        grouped['Vol Util'] = vol_utils        # ADDED
+        grouped['Vol Util'] = vol_utils
+
+        # Calculate 'Total Average Weight' as Util * Total Capacity moved (numeric)
+        grouped['Total Average Weight'] = grouped.apply(
+            lambda row: round((row['Util'] * row['Capacity Moved']), 2) if (pd.notnull(row['Util']) and pd.notnull(row['Capacity Moved'])) else None,
+            axis=1
+        )
+
         grouped['Util'] = grouped['Util'].apply(lambda x: f"{round(x * 100, 2)}%" if pd.notnull(x) else None)
-        grouped['Vol Util'] = grouped['Vol Util'].apply(lambda x: f"{round(x * 100, 2)}%" if pd.notnull(x) else None)  # ADDED
+        grouped['Vol Util'] = grouped['Vol Util'].apply(lambda x: f"{round(x * 100, 2)}%" if pd.notnull(x) else None)
 
         def adjusted_trips(row):
             route = row['route']
@@ -164,6 +163,7 @@ if uploaded_files:
             else:
                 return trip_count
         grouped['Total Trips'] = grouped.apply(adjusted_trips, axis=1)
+
         def cpkg_calc(row):
             try:
                 utils_array = filtered[
@@ -206,9 +206,8 @@ if uploaded_files:
             df = grouped[grouped['Month'] == m].copy()
             df = df.dropna(subset=['Lane', 'route'], how='all')
             df = df[(df[['Lane', 'route', 'Total cost', 'Total Capacity moved']].notnull().any(axis=1))]
-            # Include Vol Util in selected columns
             df_final = df[
-                ['Lane', 'route', 'Total cost', 'Total Capacity moved', 'Util', 'Vol Util', 'Total Trips', 'cpkg']
+                ['Lane', 'route', 'Total cost', 'Total Capacity moved', 'Util', 'Vol Util', 'Total Trips', 'cpkg', 'Total Average Weight']
             ]
             df_final = df_final[~(
                 (df_final['Total cost'].fillna(0) == 0) &
@@ -216,11 +215,9 @@ if uploaded_files:
                 (df_final['Util'].isnull())
             )]
             sheets[str(m)] = df_final.reset_index(drop=True)
-        # Create Comparison sheet with common routes across all months
+
         if len(months) > 1:
-            # Pick first month's df
             common_routes = sheets[months[0]][['route']].copy()
-            # Intersect routes from other months
             for month in months[1:]:
                 common_routes = pd.merge(
                     common_routes,
@@ -228,11 +225,9 @@ if uploaded_files:
                     on='route',
                     how='inner'
                 )
-            # Now prepare the comparison DataFrame
             comp_dfs = []
             for month in months:
                 df = sheets[month][sheets[month]['route'].isin(common_routes['route'])].copy()
-                # Prefix columns with month to distinguish
                 df = df.rename(
                     columns={
                         'Total cost': f'Total cost ({month})',
@@ -240,14 +235,14 @@ if uploaded_files:
                         'Util': f'Util ({month})',
                         'Vol Util': f'Vol Util ({month})',
                         'Total Trips': f'Total Trips ({month})',
-                        'cpkg': f'cpkg ({month})'
+                        'cpkg': f'cpkg ({month})',
+                        'Total Average Weight': f'Total Average Weight ({month})'
                     }
                 )
-                # Keep route for merge
                 comp_dfs.append(df.set_index('route'))
-            # Merge all on route
             comparison_df = pd.concat(comp_dfs, axis=1, join='inner').reset_index()
             sheets['Comparison'] = comparison_df
+
         return sheets
 
     def export_filtered_excel(df_dict):
