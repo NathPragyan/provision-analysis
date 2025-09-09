@@ -207,7 +207,8 @@ if uploaded_files:
             df = df.dropna(subset=['Lane', 'route'], how='all')
             df = df[(df[['Lane', 'route', 'Total cost', 'Total Capacity moved']].notnull().any(axis=1))]
             df_final = df[
-                ['Lane', 'route', 'Total cost', 'Total Capacity moved', 'Util', 'Vol Util', 'Total Trips', 'cpkg', 'Total Average Weight']
+                ['Lane', 'route', 'Total cost', 'Total Capacity moved', 'Util', 'Vol Util', 
+                 'Total Trips', 'cpkg', 'Total Average Weight']
             ]
             df_final = df_final[~(
                 (df_final['Total cost'].fillna(0) == 0) &
@@ -216,6 +217,7 @@ if uploaded_files:
             )]
             sheets[str(m)] = df_final.reset_index(drop=True)
 
+        # Comparison sheet for routes common to all months
         if len(months) > 1:
             common_routes = sheets[months[0]][['route']].copy()
             for month in months[1:]:
@@ -242,6 +244,14 @@ if uploaded_files:
                 comp_dfs.append(df.set_index('route'))
             comparison_df = pd.concat(comp_dfs, axis=1, join='inner').reset_index()
             sheets['Comparison'] = comparison_df
+
+            # UNIQUE ROUTES sheets per month (routes present only in that month)
+            month_routes = {m: set(sheets[m]['route']) for m in months}
+            for m in months:
+                other_months_routes = set().union(*(month_routes[mo] for mo in months if mo != m))
+                unique_routes = month_routes[m] - other_months_routes
+                unique_df = sheets[m][sheets[m]['route'].isin(unique_routes)].copy()
+                sheets[f"Only {m}"] = unique_df.reset_index(drop=True)
 
         return sheets
 
